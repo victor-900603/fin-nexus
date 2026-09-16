@@ -15,6 +15,28 @@ REGULATIONS_CATALOG = "regulations_catalog.json"
 
 DEFAULT_DATA_DIR = Path("data")
 
+DEFAULT_LOG_LEVEL = "INFO"
+
+
+class LogConfig(BaseSettings):
+    """日誌設定。"""
+
+    model_config = SettingsConfigDict(
+        env_prefix="FINRAG_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    log_level: str = DEFAULT_LOG_LEVEL
+
+    @field_validator("log_level", mode="before")
+    @classmethod
+    def _default_log_level(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return value.strip().upper() or DEFAULT_LOG_LEVEL
+        return value
+
 
 class StoragePaths(BaseSettings):
     """資料落盤路徑：raw、parsed、chunks 與 MinerU 工作目錄。"""

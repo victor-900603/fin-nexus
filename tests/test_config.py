@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import pytest
@@ -10,10 +11,12 @@ from finrag.config import (
     FINANCIAL_REPORTS,
     REGULATIONS,
     REPORTS_CATALOG,
+    LogConfig,
     StoragePaths,
 )
+from finrag.logging import configure_logging
 
-_FINRAG_ENV = ("FINRAG_DATA_DIR",)
+_FINRAG_ENV = ("FINRAG_DATA_DIR", "FINRAG_LOG_LEVEL")
 
 
 def _clear_environment(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -66,3 +69,27 @@ def test_storage_blank_data_dir_uses_default(monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.setenv("FINRAG_DATA_DIR", "  ")
 
     assert StoragePaths(_env_file=None).data_dir == Path("data")
+
+
+def test_log_config_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    _clear_environment(monkeypatch)
+
+    assert LogConfig(_env_file=None).log_level == "INFO"
+
+
+def test_log_config_reads_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("FINRAG_LOG_LEVEL", " debug ")
+
+    assert LogConfig(_env_file=None).log_level == "DEBUG"
+
+
+def test_log_config_blank_uses_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("FINRAG_LOG_LEVEL", "  ")
+
+    assert LogConfig(_env_file=None).log_level == "INFO"
+
+
+def test_configure_logging_sets_root_level() -> None:
+    configure_logging("WARNING")
+
+    assert logging.getLogger().level == logging.WARNING
