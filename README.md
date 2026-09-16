@@ -13,6 +13,10 @@
 uv sync
 ```
 
+## 設定
+
+資料落盤路徑可透過 `FINRAG_DATA_DIR` 覆寫，預設為 `data/`。
+
 ## 開發指令
 
 ```powershell
