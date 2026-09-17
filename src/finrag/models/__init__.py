@@ -10,6 +10,7 @@ from finrag.models.document import (
     ReportScope,
     SourceType,
 )
+from finrag.models.domain import to_western_year
 
 __all__ = [
     "Block",
@@ -20,4 +21,5 @@ __all__ = [
     "ReportPeriod",
     "ReportScope",
     "SourceType",
+    "to_western_year",
 ]

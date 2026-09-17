@@ -11,5 +11,6 @@ venv/
 .coverage
 htmlcov/
 
-# Local environment
+# Local environment and data
 .env
+data/
