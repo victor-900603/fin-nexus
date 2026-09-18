@@ -12,16 +12,94 @@ from finrag.config import (
     REGULATIONS,
     REPORTS_CATALOG,
     LogConfig,
+    ParseConfig,
     StoragePaths,
 )
 from finrag.logging import configure_logging
 
-_FINRAG_ENV = ("FINRAG_DATA_DIR", "FINRAG_LOG_LEVEL")
+_FINRAG_ENV = (
+    "FINRAG_MINERU_MODE",
+    "FINRAG_MINERU_TIER",
+    "FINRAG_MINERU_API_KEY",
+    "FINRAG_MINERU_REMOTE_URL",
+    "FINRAG_DATA_DIR",
+    "FINRAG_LOG_LEVEL",
+)
 
 
 def _clear_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     for key in _FINRAG_ENV:
         monkeypatch.delenv(key, raising=False)
+
+
+def test_defaults_use_remote_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    _clear_environment(monkeypatch)
+
+    config = ParseConfig(_env_file=None)
+
+    assert config.mode == "remote"
+    assert config.tier == "basic"
+    assert config.api_key is None
+    assert config.remote_url is None
+
+
+def test_reads_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("FINRAG_MINERU_MODE", "local")
+    monkeypatch.setenv("FINRAG_MINERU_TIER", "standard")
+    monkeypatch.setenv("FINRAG_MINERU_API_KEY", " secret-token ")
+    monkeypatch.setenv("FINRAG_MINERU_REMOTE_URL", "https://example.com/api")
+
+    config = ParseConfig(_env_file=None)
+
+    assert config.mode == "local"
+    assert config.tier == "standard"
+    assert config.api_key == "secret-token"
+    assert config.remote_url == "https://example.com/api"
+
+
+def test_blank_environment_uses_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("FINRAG_MINERU_MODE", "  ")
+    monkeypatch.setenv("FINRAG_MINERU_TIER", "  ")
+    monkeypatch.setenv("FINRAG_MINERU_API_KEY", "")
+
+    config = ParseConfig(_env_file=None)
+
+    assert config.mode == "remote"
+    assert config.tier == "basic"
+    assert config.api_key is None
+
+
+def test_rejects_unknown_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("FINRAG_MINERU_MODE", "cloud")
+
+    with pytest.raises(ValueError):
+        ParseConfig(_env_file=None)
+
+
+def test_reads_dotenv_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _clear_environment(monkeypatch)
+    (tmp_path / ".env").write_text(
+        "# 註解\n"
+        "FINRAG_MINERU_MODE=local\n"
+        "FINRAG_MINERU_TIER='standard'\n"
+        'FINRAG_MINERU_API_KEY="secret-token"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    config = ParseConfig()
+
+    assert config.mode == "local"
+    assert config.tier == "standard"
+    assert config.api_key == "secret-token"
+
+
+def test_environment_overrides_dotenv(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    (tmp_path / ".env").write_text("FINRAG_MINERU_TIER=standard\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("FINRAG_MINERU_TIER", "advanced")
+
+    assert ParseConfig().tier == "advanced"
 
 
 def test_storage_defaults_use_data_dir(monkeypatch: pytest.MonkeyPatch) -> None:

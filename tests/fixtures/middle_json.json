@@ -1,0 +1,67 @@
+{
+  "schema": "docvortex.middle",
+  "schema_version": "2.0",
+  "is_full_document": true,
+  "pages": [
+    {
+      "page_idx": 0,
+      "blocks": [
+        {
+          "type": "paragraph_title",
+          "index": 0,
+          "bbox": [0.1, 0.15, 0.9, 0.18],
+          "level": 2,
+          "content": "四、合併資產負債表"
+        },
+        {
+          "type": "text",
+          "index": 1,
+          "bbox": [0.1, 0.2, 0.9, 0.22],
+          "content": "單位：新台幣仟元"
+        },
+        {
+          "type": "image",
+          "index": 2,
+          "bbox": [0.1, 0.25, 0.9, 0.3],
+          "content": []
+        },
+        {
+          "type": "page_number",
+          "index": 3,
+          "bbox": [0.45, 0.95, 0.55, 0.97],
+          "content": "1"
+        }
+      ]
+    },
+    {
+      "page_idx": 1,
+      "blocks": [
+        {
+          "type": "table",
+          "index": 0,
+          "bbox": [0.1, 0.1, 0.9, 0.6],
+          "content": [
+            {
+              "type": "table_caption",
+              "content": [{ "type": "text", "content": "合併資產負債表（節錄）" }]
+            },
+            {
+              "type": "table_body",
+              "content": "<table><tr><th>項目</th><th>金額</th></tr><tr><td>現金及約當現金</td><td>2,767,856,402</td></tr><tr><td>應收帳款</td><td>1,000</td></tr></table>"
+            },
+            {
+              "type": "table_footnote",
+              "content": [{ "type": "text", "content": "註：單位為仟元。" }]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "index": 1,
+          "bbox": [0.1, 0.65, 0.9, 0.7],
+          "content": "附註說明內容。"
+        }
+      ]
+    }
+  ]
+}

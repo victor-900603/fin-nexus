@@ -3,10 +3,16 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+ParseMode = Literal["remote", "local"]
+
+MODES: tuple[ParseMode, ...] = ("remote", "local")
+DEFAULT_MODE: ParseMode = "remote"
+DEFAULT_TIER = "basic"
 
 FINANCIAL_REPORTS = "financial_reports"
 REGULATIONS = "regulations"
@@ -16,6 +22,48 @@ REGULATIONS_CATALOG = "regulations_catalog.json"
 DEFAULT_DATA_DIR = Path("data")
 
 DEFAULT_LOG_LEVEL = "INFO"
+
+
+class ParseConfig(BaseSettings):
+    """MinerU 解析設定：預設遠端，可切換本機。"""
+
+    model_config = SettingsConfigDict(
+        env_prefix="FINRAG_MINERU_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    mode: ParseMode = DEFAULT_MODE
+    tier: str = DEFAULT_TIER
+    api_key: str | None = None
+    remote_url: str | None = None
+
+    @field_validator("mode", mode="before")
+    @classmethod
+    def _normalize_mode(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            text = value.strip().lower()
+            if not text:
+                return DEFAULT_MODE
+            if text not in MODES:
+                raise ValueError(f"不支援的解析模式：{text}")
+            return text
+        return value
+
+    @field_validator("tier", mode="before")
+    @classmethod
+    def _normalize_tier(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return value.strip() or DEFAULT_TIER
+        return value
+
+    @field_validator("api_key", "remote_url", mode="before")
+    @classmethod
+    def _blank_to_none(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return value.strip() or None
+        return value
 
 
 class LogConfig(BaseSettings):
