@@ -136,9 +136,11 @@ def _render_table(rows: list[list[str]], footnotes: list[str]) -> str:
 def _merge_rows(prev: list[list[str]], new: list[list[str]]) -> list[list[str]]:
     if not new:
         return prev
-    if prev and prev[0] == new[0]:
-        return [*prev, *new[1:]]
-    return [*prev, *new]
+    if not prev:
+        return new
+    width = max(len(prev[0]), len(new[0]))
+    tail = new[1:] if prev[0] == new[0] else new
+    return [row + [""] * (width - len(row)) for row in [*prev, *tail]]
 
 
 def _continues_prev(raw: dict[str, Any]) -> bool:

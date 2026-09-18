@@ -28,12 +28,14 @@ def _rows(table: Tag) -> list[Tag]:
 def _expand(table: Tag) -> list[list[str]]:
     rows = _rows(table)
     grid: list[list[str]] = []
+    filled: list[list[bool]] = []
     for row_index, tr in enumerate(rows):
         while len(grid) <= row_index:
             grid.append([])
+            filled.append([])
         column = 0
         for cell in tr.find_all(["td", "th"], recursive=False):
-            while column < len(grid[row_index]) and grid[row_index][column] != "":
+            while column < len(filled[row_index]) and filled[row_index][column]:
                 column += 1
             colspan = _span(cell, "colspan")
             rowspan = _span(cell, "rowspan")
@@ -42,11 +44,15 @@ def _expand(table: Tag) -> list[list[str]]:
                 target = row_index + offset_row
                 while len(grid) <= target:
                     grid.append([])
+                    filled.append([])
                 for offset_column in range(colspan):
                     col = column + offset_column
                     while len(grid[target]) <= col:
                         grid[target].append("")
-                    grid[target][col] = text
+                        filled[target].append(False)
+                    filled[target][col] = True
+                    if offset_row == 0:
+                        grid[target][col] = text
             column += colspan
     return grid
 
