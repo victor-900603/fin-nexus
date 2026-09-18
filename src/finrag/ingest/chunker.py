@@ -1,0 +1,187 @@
+"""財報文件父子切片。"""
+
+from __future__ import annotations
+
+import re
+from collections.abc import Sequence
+from dataclasses import dataclass
+
+from finrag.models import (
+    Block,
+    BlockType,
+    Chunk,
+    ChunkMetadata,
+    FinancialReportMeta,
+    ParsedDocument,
+)
+from finrag.text import TokenCounter, pack_by_tokens
+
+_SENTENCE_END = re.compile(r"(?<=[。！？；!?;])")
+_TABLE_ROW = re.compile(r"^\s*\|")
+
+
+@dataclass(frozen=True)
+class ChunkConfig:
+    """切片參數。"""
+
+    child_max: int = 250
+    parent_max: int = 1200
+
+
+@dataclass(frozen=True)
+class _Unit:
+    text: str
+    is_table: bool
+    page: int | None
+
+
+def _split_sentences(text: str) -> list[str]:
+    parts = [part.strip() for part in _SENTENCE_END.split(text)]
+    return [part for part in parts if part]
+
+
+def _hard_split(text: str, counter: TokenCounter, max_tokens: int) -> list[str]:
+    pieces: list[str] = []
+    current = ""
+    for char in text:
+        if current and counter(current + char) > max_tokens:
+            pieces.append(current)
+            current = char
+        else:
+            current += char
+    if current:
+        pieces.append(current)
+    return pieces
+
+
+def _table_fragments(text: str, counter: TokenCounter, max_tokens: int) -> list[str]:
+    if counter(text) <= max_tokens:
+        return [text]
+    lines = [line for line in text.splitlines() if line.strip()]
+    header = lines[:2]
+    body = lines[len(header) :]
+    pipe = [line for line in body if _TABLE_ROW.match(line)]
+    notes = [line for line in body if not _TABLE_ROW.match(line)]
+    fragments: list[str] = []
+    current: list[str] = []
+    for row in pipe:
+        if current and counter("\n".join([*header, *current, row])) > max_tokens:
+            fragments.append("\n".join([*header, *current]))
+            current = []
+        current.append(row)
+    fragments.append("\n".join([*header, *current]))
+    if notes:
+        fragments[-1] = f"{fragments[-1]}\n\n{' '.join(notes)}"
+    pieces: list[str] = []
+    for fragment in fragments:
+        if counter(fragment) <= max_tokens:
+            pieces.append(fragment)
+        else:
+            pieces.extend(_hard_split(fragment, counter, max_tokens))
+    return pieces
+
+
+def _block_units(block: Block, counter: TokenCounter, max_tokens: int) -> list[_Unit]:
+    if block.type is BlockType.TABLE:
+        return [
+            _Unit(text=part, is_table=True, page=block.page)
+            for part in _table_fragments(block.text, counter, max_tokens)
+        ]
+    units: list[_Unit] = []
+    for sentence in _split_sentences(block.text):
+        pieces = (
+            [sentence]
+            if counter(sentence) <= max_tokens
+            else _hard_split(sentence, counter, max_tokens)
+        )
+        units.extend(_Unit(text=piece, is_table=False, page=block.page) for piece in pieces)
+    return units
+
+
+def _pack(
+    units: Sequence[_Unit], counter: TokenCounter, max_tokens: int, prefix_tokens: int
+) -> list[list[_Unit]]:
+    return pack_by_tokens(units, lambda unit: unit.text, counter, max_tokens, prefix_tokens)
+
+
+def _sections(blocks: Sequence[Block]) -> list[tuple[list[str], list[Block]]]:
+    """依標題切分章節。"""
+    sections: list[tuple[list[str], list[Block]]] = []
+    stack: list[tuple[int, str]] = []
+    current: list[Block] = []
+
+    def flush() -> None:
+        if current:
+            sections.append(([text for _, text in stack], list(current)))
+            current.clear()
+
+    for block in blocks:
+        if block.type is BlockType.HEADING:
+            flush()
+            level = block.level if block.level is not None else len(stack) + 1
+            while stack and stack[-1][0] >= level:
+                stack.pop()
+            stack.append((level, block.text))
+        else:
+            current.append(block)
+    flush()
+    return sections
+
+
+def _make_chunk(
+    meta: FinancialReportMeta,
+    chunk_id: str,
+    parent_id: str | None,
+    prefix: str,
+    section: str,
+    units: Sequence[_Unit],
+) -> Chunk:
+    text = prefix + "\n".join(unit.text for unit in units)
+    page = next((unit.page for unit in units if unit.page is not None), None)
+    is_table = any(unit.is_table for unit in units)
+    metadata = ChunkMetadata(
+        doc_id=meta.doc_id,
+        chunk_id=chunk_id,
+        parent_id=parent_id,
+        section=section,
+        page=page,
+        is_parent=parent_id is None,
+        is_table=is_table,
+        ticker=meta.ticker,
+        company_name=meta.company_name,
+        fiscal_year=meta.fiscal_year,
+        quarter=meta.quarter,
+        report_period=meta.report_period,
+    )
+    return Chunk(text=text, metadata=metadata)
+
+
+def chunk_document(
+    document: ParsedDocument,
+    counter: TokenCounter,
+    config: ChunkConfig | None = None,
+) -> list[Chunk]:
+    """將解析結果切成父子切片。"""
+    config = config or ChunkConfig()
+    meta = document.meta
+    doc_id = meta.doc_id
+    chunks: list[Chunk] = []
+    parent_index = 0
+    for path, blocks in _sections(document.blocks):
+        section = " > ".join(path)
+        prefix = f"{section}\n" if section else ""
+        prefix_tokens = counter(prefix) if section else 0
+        budget = max(config.child_max - prefix_tokens, 1)
+        units = [unit for block in blocks for unit in _block_units(block, counter, budget)]
+        if not units:
+            continue
+        for parent_units in _pack(units, counter, config.parent_max, prefix_tokens):
+            parent_id = f"{doc_id}:p{parent_index}"
+            chunks.append(_make_chunk(meta, parent_id, None, prefix, section, parent_units))
+            for child_index, child_units in enumerate(
+                _pack(parent_units, counter, config.child_max, prefix_tokens)
+            ):
+                child_id = f"{parent_id}:c{child_index}"
+                chunks.append(_make_chunk(meta, child_id, parent_id, prefix, section, child_units))
+            parent_index += 1
+    return chunks

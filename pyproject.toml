@@ -12,6 +12,7 @@ dependencies = [
     "opencc-python-reimplemented>=0.1.7",
     "pydantic>=2.7",
     "pydantic-settings>=2.5",
+    "transformers>=4.44",
 ]
 
 [dependency-groups]
