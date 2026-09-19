@@ -54,6 +54,54 @@ def _hard_split(text: str, counter: TokenCounter, max_tokens: int) -> list[str]:
     return pieces
 
 
+def _split_by_cells(line: str, counter: TokenCounter, max_tokens: int) -> list[str]:
+    cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+    groups: list[list[str]] = []
+    current: list[str] = []
+    for cell in cells:
+        trial = [*current, cell]
+        if current and counter("| " + " | ".join(trial) + " |") > max_tokens:
+            groups.append(current)
+            current = [cell]
+        else:
+            current = trial
+    if current:
+        groups.append(current)
+    return ["| " + " | ".join(group) + " |" for group in groups]
+
+
+def _split_table_fragment(
+    fragment: str, counter: TokenCounter, max_tokens: int
+) -> list[str]:
+    lines = fragment.splitlines()
+    if len(lines) < 2:
+        return _hard_split(fragment, counter, max_tokens)
+    header = "\n".join(lines[:2])
+    budget = max(max_tokens - counter(header) - 1, 1)
+    pieces: list[str] = []
+    for line in lines[2:]:
+        if not _TABLE_ROW.match(line):
+            if not line.strip():
+                continue
+            if counter(line) <= max_tokens:
+                pieces.append(line)
+            else:
+                pieces.extend(_hard_split(line, counter, max_tokens))
+            continue
+        if counter(line) <= max_tokens:
+            pieces.append(f"{header}\n{line}")
+            continue
+        for part in _split_by_cells(line, counter, budget):
+            if not part.strip():
+                continue
+            piece = f"{header}\n{part}"
+            if counter(piece) <= max_tokens:
+                pieces.append(piece)
+            else:
+                pieces.extend(_hard_split(piece, counter, max_tokens))
+    return pieces or _hard_split(fragment, counter, max_tokens)
+
+
 def _table_fragments(text: str, counter: TokenCounter, max_tokens: int) -> list[str]:
     if counter(text) <= max_tokens:
         return [text]
@@ -77,7 +125,7 @@ def _table_fragments(text: str, counter: TokenCounter, max_tokens: int) -> list[
         if counter(fragment) <= max_tokens:
             pieces.append(fragment)
         else:
-            pieces.extend(_hard_split(fragment, counter, max_tokens))
+            pieces.extend(_split_table_fragment(fragment, counter, max_tokens))
     return pieces
 
 
@@ -128,6 +176,16 @@ def _sections(blocks: Sequence[Block]) -> list[tuple[list[str], list[Block]]]:
     return sections
 
 
+def _join_units(units: Sequence[_Unit]) -> str:
+    if not units:
+        return ""
+    pieces = [units[0].text]
+    for previous, unit in zip(units, units[1:], strict=False):
+        pieces.append("\n\n" if previous.is_table or unit.is_table else "\n")
+        pieces.append(unit.text)
+    return "".join(pieces)
+
+
 def _make_chunk(
     meta: FinancialReportMeta,
     chunk_id: str,
@@ -136,7 +194,7 @@ def _make_chunk(
     section: str,
     units: Sequence[_Unit],
 ) -> Chunk:
-    text = prefix + "\n".join(unit.text for unit in units)
+    text = prefix + _join_units(units)
     page = next((unit.page for unit in units if unit.page is not None), None)
     is_table = any(unit.is_table for unit in units)
     metadata = ChunkMetadata(

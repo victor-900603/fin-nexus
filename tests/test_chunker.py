@@ -71,7 +71,7 @@ def test_child_ids_are_sequential() -> None:
         Block(type=BlockType.TEXT, text="現金。應收帳款。"),
     ]
     chunks = chunk_document(
-        _document(blocks), counter=_counter, config=ChunkConfig(child_max=10, parent_max=100)
+        _document(blocks), counter=_counter, config=ChunkConfig(child_max=12, parent_max=100)
     )
     children = [chunk for chunk in chunks if not chunk.metadata.is_parent]
     assert [child.metadata.chunk_id for child in children] == [
@@ -196,3 +196,52 @@ def test_write_chunks_jsonl(tmp_path: Path) -> None:
     lines = path.read_text(encoding="utf-8").splitlines()
     assert len(lines) == len(chunks)
     assert json.loads(lines[0])["metadata"]["doc_id"] == DOC_ID
+
+
+def test_adjacent_tables_are_separated() -> None:
+    first = "| a |\n| --- |\n| 1 |"
+    second = "| b |\n| --- |\n| 2 |"
+    blocks = [
+        Block(type=BlockType.TABLE, text=first, page=1),
+        Block(type=BlockType.TABLE, text=second, page=2),
+    ]
+    chunks = chunk_document(
+        _document(blocks), counter=_counter, config=ChunkConfig(child_max=200, parent_max=400)
+    )
+    child = next(chunk for chunk in chunks if not chunk.metadata.is_parent)
+    assert "\n\n| b |" in child.text
+
+
+def test_oversized_row_split_keeps_header() -> None:
+    cells = " | ".join(str(number) for number in range(1, 21))
+    table = f"| h |\n| --- |\n| {cells} |"
+    blocks = [Block(type=BlockType.TABLE, text=table, page=1)]
+    chunks = chunk_document(
+        _document(blocks), counter=_counter, config=ChunkConfig(child_max=30, parent_max=1000)
+    )
+    children = [chunk for chunk in chunks if not chunk.metadata.is_parent]
+    assert len(children) > 1
+    assert all(len(child.text) <= 30 for child in children)
+
+
+def test_wide_row_kept_intact_even_over_budget() -> None:
+    table = "| h1 | h2 |\n| --- | --- |\n| aaaaa | bbbb |"
+    blocks = [Block(type=BlockType.TABLE, text=table, page=1)]
+    chunks = chunk_document(
+        _document(blocks), counter=_counter, config=ChunkConfig(child_max=40, parent_max=1000)
+    )
+    children = [chunk for chunk in chunks if not chunk.metadata.is_parent]
+    assert len(children) == 1
+    assert children[0].text == table
+    assert len(children[0].text) > 40
+
+
+def test_split_table_fragment_keeps_notes_and_drops_empty_pieces() -> None:
+    from finrag.ingest.chunker import _split_table_fragment
+
+    fragment = "| h |\n| --- |\n| " + "x" * 30 + " |\n\n<u>註</u>"
+    pieces = _split_table_fragment(fragment, _counter, 20)
+
+    assert "<u>註</u>" in pieces
+    assert all(piece.strip() for piece in pieces)
+    assert all(piece != "| h |\n| --- |" for piece in pieces)

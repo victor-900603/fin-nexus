@@ -221,6 +221,8 @@ class _BlockBuilder:
         )
 
     def _add_text(self, raw: dict[str, Any], page: int | None) -> None:
+        self._table_grid = None
+        self._table_footnotes = []
         block = _text_block(raw.get("type"), raw, page)
         if block is None:
             return
@@ -238,8 +240,6 @@ class _BlockBuilder:
             )
         else:
             self.blocks.append(block)
-        self._table_grid = None
-        self._table_footnotes = []
 
 
 def middle_json_to_blocks(data: dict[str, Any]) -> list[Block]:
