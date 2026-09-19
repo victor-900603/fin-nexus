@@ -14,11 +14,17 @@ from finrag.models.document import (
     ReportScope,
     SourceType,
 )
-from finrag.models.domain import to_western_year
+from finrag.models.domain import (
+    COMPANY_NAMES,
+    ReportTarget,
+    to_roc_year,
+    to_western_year,
+)
 
 __all__ = [
     "Block",
     "BlockType",
+    "COMPANY_NAMES",
     "Chunk",
     "ChunkMetadata",
     "FinancialReportMeta",
@@ -26,6 +32,8 @@ __all__ = [
     "Quarter",
     "ReportPeriod",
     "ReportScope",
+    "ReportTarget",
     "SourceType",
+    "to_roc_year",
     "to_western_year",
 ]
