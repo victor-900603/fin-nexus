@@ -15,6 +15,9 @@ dependencies = [
     "transformers>=4.44",
 ]
 
+[project.scripts]
+finrag = "finrag.cli:main"
+
 [dependency-groups]
 dev = [
     "mypy>=1.13",

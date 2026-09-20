@@ -26,6 +26,15 @@ uv sync
 - `FINRAG_MINERU_API_KEY`：遠端模式所需的 API 金鑰
 - `FINRAG_MINERU_REMOTE_URL`：遠端服務位址
 
+## 資料入庫指令
+
+```powershell
+uv run finrag fetch   # 下載財報 PDF
+uv run finrag parse   # 解析 PDF 為結構化文件
+uv run finrag chunk   # 切分為 parent-child 切片
+uv run finrag all     # 依序執行 fetch、parse、chunk
+```
+
 ## 開發指令
 
 ```powershell
