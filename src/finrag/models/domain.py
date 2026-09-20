@@ -1,4 +1,4 @@
-"""領域資料：公司名稱與年度換算。"""
+"""領域資料：公司名稱、法規清單與年度換算。"""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from finrag.models.document import (
     ReportPeriod,
     document_id,
     period_for_quarter,
+    regulation_id,
 )
 
 COMPANY_NAMES: dict[str, str] = {
@@ -27,6 +28,30 @@ def to_western_year(roc_year: int) -> int:
 def to_roc_year(fiscal_year: int) -> int:
     """西元年轉民國年。"""
     return fiscal_year - 1911
+
+
+@dataclass(frozen=True)
+class LawSpec:
+    """一部法規的識別資訊。"""
+
+    pcode: str
+    name: str
+
+    @property
+    def doc_id(self) -> str:
+        """法規文件識別碼，格式 law_{pcode}。"""
+        return regulation_id(self.pcode)
+
+
+SECURITIES_LAW = LawSpec("G0400001", "證券交易法")
+ACQUISITION_DISPOSAL_LAW = LawSpec("G0400069", "公開發行公司取得或處分資產處理準則")
+INTERNAL_CONTROL_LAW = LawSpec("G0400045", "公開發行公司建立內部控制制度處理準則")
+
+LAW_SPECS: tuple[LawSpec, ...] = (
+    SECURITIES_LAW,
+    ACQUISITION_DISPOSAL_LAW,
+    INTERNAL_CONTROL_LAW,
+)
 
 
 @dataclass(frozen=True)

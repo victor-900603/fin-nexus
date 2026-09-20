@@ -1,5 +1,6 @@
 """文件模型測試。"""
 
+from datetime import date
 from typing import Any
 
 import pytest
@@ -7,6 +8,7 @@ from pydantic import ValidationError
 
 from finrag.models import (
     FinancialReportMeta,
+    RegulationMeta,
     ReportPeriod,
     ReportScope,
     SourceType,
@@ -92,3 +94,43 @@ def test_q1_rejects_annual() -> None:
 def test_missing_required_fields() -> None:
     with pytest.raises(ValidationError):
         FinancialReportMeta.model_validate({"ticker": "2330"})
+
+
+def _regulation(**overrides: Any) -> RegulationMeta:
+    data: dict[str, Any] = {
+        "reg_name": "證券交易法",
+        "reg_pcode": "G0400001",
+        "revision_date": date(2025, 7, 24),
+        "source_uri": "https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=G0400001",
+    }
+    data.update(overrides)
+    return RegulationMeta(**data)
+
+
+def test_regulation_full_construction() -> None:
+    meta = _regulation()
+    assert meta.reg_name == "證券交易法"
+    assert meta.reg_pcode == "G0400001"
+    assert meta.revision_date == date(2025, 7, 24)
+    assert meta.source_uri == (
+        "https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=G0400001"
+    )
+
+
+def test_regulation_doc_id() -> None:
+    assert _regulation().doc_id == "law_G0400001"
+
+
+def test_regulation_defaults() -> None:
+    meta = _regulation()
+    assert meta.source is SourceType.MOJ_LAW
+    assert meta.parse_engine is None
+
+
+def test_regulation_revision_date_is_date() -> None:
+    assert isinstance(_regulation().revision_date, date)
+
+
+def test_regulation_missing_required_fields() -> None:
+    with pytest.raises(ValidationError):
+        RegulationMeta.model_validate({"reg_name": "證券交易法"})
