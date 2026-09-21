@@ -10,6 +10,8 @@ from finrag.models.catalog import (
 from finrag.models.chunk import (
     Chunk,
     ChunkMetadata,
+    RegulationChunk,
+    RegulationChunkMetadata,
 )
 from finrag.models.document import (
     Block,
@@ -49,6 +51,8 @@ __all__ = [
     "ParsedRegulation",
     "Quarter",
     "RegulationArticle",
+    "RegulationChunk",
+    "RegulationChunkMetadata",
     "RegulationClause",
     "RegulationMeta",
     "ReportCatalog",
