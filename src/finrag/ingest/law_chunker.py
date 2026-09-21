@@ -38,6 +38,7 @@ def _parent_chunk(
     chunk_id: str,
     section: str,
     chapter: str | None,
+    article_no: str,
     text: str,
 ) -> RegulationChunk:
     return RegulationChunk(
@@ -50,7 +51,7 @@ def _parent_chunk(
             is_parent=True,
             reg_name=meta.reg_name,
             reg_pcode=meta.reg_pcode,
-            article_no=None,
+            article_no=article_no,
             chapter=chapter,
             revision_date=meta.revision_date,
         ),
@@ -88,7 +89,7 @@ def chunk_regulation(
     counter: TokenCounter,
     config: ChunkConfig | None = None,
 ) -> list[RegulationChunk]:
-    """將法規解析結果以「條」為單位切成章節父子切片。"""
+    """將法規解析結果切成父子切片：每條一個父切片，條內各款為子切片。"""
     config = config or ChunkConfig()
     meta = document.meta
     doc_id = meta.doc_id
@@ -97,30 +98,39 @@ def chunk_regulation(
     for chapter, section, articles in _group_articles(document.articles):
         path_parts = [part for part in (chapter, section) if part]
         section_text = " > ".join(path_parts)
-        parent_prefix = _bracket([meta.reg_name, *path_parts]) + "\n"
-        prefix_tokens = counter(parent_prefix)
-        children: list[tuple[RegulationArticle, str]] = []
         for article in articles:
             body = _article_body(article)
             if not body:
                 continue
             prefix = _bracket([meta.reg_name, *path_parts, article.article_no])
-            children.append((article, f"{prefix}\n{body}"))
-        if not children:
-            continue
-        groups = pack_by_tokens(
-            children, lambda item: item[1], counter, config.parent_max, prefix_tokens
-        )
-        for group in groups:
+            prefix_text = f"{prefix}\n"
             parent_id = f"{doc_id}:p{parent_index}"
-            parent_text = parent_prefix + "\n".join(item[1] for item in group)
-            chunks.append(_parent_chunk(meta, parent_id, section_text, chapter, parent_text))
-            for child_index, (article, child_text) in enumerate(group):
-                child_id = f"{parent_id}:c{child_index}"
+            parent_index += 1
+            chunks.append(
+                _parent_chunk(
+                    meta,
+                    parent_id,
+                    section_text,
+                    chapter,
+                    article.article_no,
+                    prefix_text + body,
+                )
+            )
+            clauses = [(clause.text,) for clause in article.clauses if clause.text]
+            groups = pack_by_tokens(
+                clauses, lambda item: item[0], counter, config.child_max, counter(prefix_text)
+            )
+            for child_index, group in enumerate(groups):
+                child_text = prefix_text + "\n".join(item[0] for item in group)
                 chunks.append(
                     _child_chunk(
-                        meta, child_id, parent_id, section_text, chapter, article, child_text
+                        meta,
+                        f"{parent_id}:c{child_index}",
+                        parent_id,
+                        section_text,
+                        chapter,
+                        article,
+                        child_text,
                     )
                 )
-            parent_index += 1
     return chunks

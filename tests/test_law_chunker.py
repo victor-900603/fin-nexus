@@ -52,13 +52,15 @@ def _children(chunks: list[RegulationChunk]) -> list[RegulationChunk]:
     return [chunk for chunk in chunks if not chunk.metadata.is_parent]
 
 
-def test_each_article_is_a_child() -> None:
+def test_each_article_has_its_own_parent() -> None:
     chunks = chunk_regulation(_document([_article("第 1 條"), _article("第 2 條")]), counter=len)
     children = _children(chunks)
     parents = _parents(chunks)
     assert [child.metadata.article_no for child in children] == ["第 1 條", "第 2 條"]
-    assert len(parents) == 1
-    assert all(child.metadata.parent_id == parents[0].metadata.chunk_id for child in children)
+    assert [parent.metadata.article_no for parent in parents] == ["第 1 條", "第 2 條"]
+    assert [child.metadata.parent_id for child in children] == [
+        parent.metadata.chunk_id for parent in parents
+    ]
 
 
 def test_chunk_ids_are_sequential() -> None:
@@ -86,12 +88,12 @@ def test_child_prefix_without_section() -> None:
     assert child.text.startswith("[證券交易法 > 第一章總則 > 第 1 條]\n")
 
 
-def test_parent_prefix_and_contains_articles() -> None:
+def test_parent_prefix_includes_article() -> None:
     chunks = chunk_regulation(_document([_article("第 1 條"), _article("第 2 條")]), counter=len)
-    parent = _parents(chunks)[0]
-    assert parent.text.startswith("[證券交易法 > 第一章總則]\n")
-    assert "[證券交易法 > 第一章總則 > 第 1 條]" in parent.text
-    assert "[證券交易法 > 第一章總則 > 第 2 條]" in parent.text
+    parents = _parents(chunks)
+    assert parents[0].text.startswith("[證券交易法 > 第一章總則 > 第 1 條]\n")
+    assert parents[1].text.startswith("[證券交易法 > 第一章總則 > 第 2 條]\n")
+    assert "第 1 條" not in parents[1].text
 
 
 def test_metadata_fields() -> None:
@@ -106,9 +108,9 @@ def test_metadata_fields() -> None:
     assert child.metadata.parent_id is not None
 
 
-def test_parent_metadata_has_no_article() -> None:
+def test_parent_metadata_has_article() -> None:
     parent = _parents(chunk_regulation(_document([_article("第 1 條")]), counter=len))[0]
-    assert parent.metadata.article_no is None
+    assert parent.metadata.article_no == "第 1 條"
     assert parent.metadata.is_parent is True
     assert parent.metadata.parent_id is None
 
@@ -121,14 +123,30 @@ def test_oversized_article_is_kept_intact() -> None:
     assert len(children[0].text) > 10
 
 
-def test_parent_max_splits_articles() -> None:
+def test_each_article_is_a_separate_parent() -> None:
     articles = [_article(f"第 {index} 條") for index in range(1, 6)]
-    chunks = chunk_regulation(
-        _document(articles), counter=len, config=ChunkConfig(parent_max=40)
-    )
-    parents = _parents(chunks)
-    assert len(parents) > 1
+    chunks = chunk_regulation(_document(articles), counter=len)
+
+    assert len(_parents(chunks)) == 5
     assert len(_children(chunks)) == 5
+
+
+def test_clauses_become_separate_children() -> None:
+    article = _article("第 1 條", clauses=("第一款。", "第二款。"))
+    chunks = chunk_regulation(
+        _document([article]),
+        counter=lambda text: text.count("。"),
+        config=ChunkConfig(child_max=1),
+    )
+
+    children = _children(chunks)
+    parent = _parents(chunks)[0]
+    assert len(children) == 2
+    assert {child.metadata.parent_id for child in children} == {parent.metadata.chunk_id}
+    assert "第一款。" in children[0].text
+    assert "第二款。" in children[1].text
+    assert "第一款。" in parent.text
+    assert "第二款。" in parent.text
 
 
 def test_multiple_sections_separate_parents() -> None:
