@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, Field
 
@@ -53,3 +53,15 @@ class ReportEntry(CatalogEntry):
 
 class ReportCatalog(Catalog[ReportEntry]):
     """財報清單，以文件識別碼為鍵。"""
+
+
+class RegulationEntry(CatalogEntry):
+    """單一法規在清單中的狀態。"""
+
+    reg_pcode: str
+    reg_name: str
+    revision_date: date | None = None
+
+
+class RegulationCatalog(Catalog[RegulationEntry]):
+    """法規清單，以文件識別碼為鍵。"""

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
 from finrag.models import (
+    RegulationCatalog,
+    RegulationEntry,
     ReportCatalog,
     ReportEntry,
     ReportPeriod,
@@ -16,6 +18,7 @@ from finrag.models import (
 from finrag.storage.repository import read_catalog, write_catalog
 
 DOC_ID = "2330_2024_Q1_consolidated"
+LAW_DOC_ID = "law_G0400001"
 
 
 def _entry(**overrides: Any) -> ReportEntry:
@@ -77,5 +80,60 @@ def test_catalog_roundtrip(tmp_path: Path) -> None:
 
 def test_load_missing_file_returns_empty(tmp_path: Path) -> None:
     catalog = read_catalog(tmp_path / "nope.json", ReportCatalog)
+
+    assert catalog.entries == {}
+
+
+def _regulation_entry(**overrides: Any) -> RegulationEntry:
+    data: dict[str, Any] = {
+        "reg_pcode": "G0400001",
+        "reg_name": "證券交易法",
+    }
+    data.update(overrides)
+    return RegulationEntry(**data)
+
+
+def test_regulation_entry_defaults() -> None:
+    entry = _regulation_entry()
+
+    assert entry.revision_date is None
+    assert entry.sha256 is None
+    assert entry.chunk_count is None
+    assert entry.updated_at is None
+    assert entry.status.downloaded is False
+
+
+def test_regulation_catalog_upsert_and_get() -> None:
+    catalog = RegulationCatalog()
+    entry = _regulation_entry()
+    catalog.upsert(LAW_DOC_ID, entry)
+
+    assert catalog.get(LAW_DOC_ID) is entry
+    assert catalog.get("missing") is None
+
+
+def test_regulation_catalog_roundtrip(tmp_path: Path) -> None:
+    path = tmp_path / "catalogs" / "regulations_catalog.json"
+    entry = _regulation_entry(
+        revision_date=date(2024, 8, 7),
+        sha256="def456",
+        status=StageStatus(downloaded=True, parsed=True, chunked=True),
+        chunk_count=265,
+        updated_at=datetime(2026, 10, 12, 9, 30, 0, tzinfo=UTC),
+    )
+    catalog = RegulationCatalog()
+    catalog.upsert(LAW_DOC_ID, entry)
+    write_catalog(path, catalog)
+
+    loaded = read_catalog(path, RegulationCatalog)
+
+    assert loaded == catalog
+    assert loaded.get(LAW_DOC_ID) is not None
+    assert loaded.entries[LAW_DOC_ID].revision_date == date(2024, 8, 7)
+    assert loaded.entries[LAW_DOC_ID].chunk_count == 265
+
+
+def test_regulation_catalog_load_missing_file_returns_empty(tmp_path: Path) -> None:
+    catalog = read_catalog(tmp_path / "nope.json", RegulationCatalog)
 
     assert catalog.entries == {}
