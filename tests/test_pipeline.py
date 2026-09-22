@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 
 import pytest
 
 from finrag.config import (
     FINANCIAL_REPORTS,
+    REGULATIONS,
+    REGULATIONS_CATALOG,
     REPORTS_CATALOG,
     StoragePaths,
 )
@@ -17,12 +20,22 @@ from finrag.models import (
     Block,
     BlockType,
     ParsedDocument,
+    ParsedRegulation,
+    RegulationArticle,
+    RegulationClause,
+    RegulationMeta,
     ReportCatalog,
 )
-from finrag.models.domain import ReportTarget
+from finrag.models.domain import (
+    ACQUISITION_DISPOSAL_LAW,
+    SECURITIES_LAW,
+    LawSpec,
+    ReportTarget,
+)
 from finrag.storage.repository import read_catalog, write_catalog
 
 _TARGETS = build_targets(["2330"], [2023], ["Q1", "Q2"])
+_SPECS = (SECURITIES_LAW, ACQUISITION_DISPOSAL_LAW)
 
 
 def _paths(tmp_path: Path) -> StoragePaths:
@@ -238,3 +251,211 @@ def test_target_meta_uses_list_url() -> None:
     meta = target.to_meta("https://example.com")
 
     assert meta.ticker == "2330"
+
+
+def _fake_fetch_regulation(calls: list[str]) -> object:
+    def fetch(client: object, spec: LawSpec, dest_dir: Path) -> Path:
+        calls.append(spec.pcode)
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        path = dest_dir / f"law_{spec.pcode}.html"
+        path.write_text("<html></html>", encoding="utf-8")
+        return path
+
+    return fetch
+
+
+def _fake_parse_regulation(calls: list[str]) -> object:
+    def parse(html: str, spec: LawSpec) -> ParsedRegulation:
+        calls.append(spec.pcode)
+        return ParsedRegulation(
+            meta=RegulationMeta(
+                reg_name=spec.name,
+                reg_pcode=spec.pcode,
+                revision_date=date(2024, 8, 7),
+                source_uri="https://example.com",
+                parse_engine="moj_law_html",
+            ),
+            articles=[
+                RegulationArticle(
+                    article_no="第 1 條",
+                    chapter="第一章總則",
+                    clauses=[RegulationClause(level=0, text="為發展國民經濟，並保障投資。")],
+                )
+            ],
+        )
+
+    return parse
+
+
+def test_fetch_regulations_records_entry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    paths = _paths(tmp_path)
+    calls: list[str] = []
+    monkeypatch.setattr(pipeline, "fetch_regulation", _fake_fetch_regulation(calls))
+
+    catalog = pipeline.fetch_regulations(_SPECS, paths, None, sleep=lambda _: None)
+
+    assert calls == ["G0400001", "G0400069"]
+    entry = catalog.get("law_G0400001")
+    assert entry is not None
+    assert entry.status.downloaded is True
+    assert entry.sha256 is not None
+    assert entry.updated_at is not None
+    assert (paths.raw_dir(REGULATIONS) / "law_G0400001.html").is_file()
+
+
+def test_fetch_regulations_is_idempotent(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    paths = _paths(tmp_path)
+    calls: list[str] = []
+    monkeypatch.setattr(pipeline, "fetch_regulation", _fake_fetch_regulation(calls))
+
+    pipeline.fetch_regulations(_SPECS, paths, None, sleep=lambda _: None)
+    pipeline.fetch_regulations(_SPECS, paths, None, sleep=lambda _: None)
+
+    assert len(calls) == 2
+
+
+def test_fetch_regulations_force_refetches(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    paths = _paths(tmp_path)
+    calls: list[str] = []
+    monkeypatch.setattr(pipeline, "fetch_regulation", _fake_fetch_regulation(calls))
+
+    pipeline.fetch_regulations(_SPECS, paths, None, sleep=lambda _: None)
+    pipeline.fetch_regulations(_SPECS, paths, None, force=True, sleep=lambda _: None)
+
+    assert len(calls) == 4
+
+
+def test_fetch_regulations_sleeps_between_downloads(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    paths = _paths(tmp_path)
+    monkeypatch.setattr(pipeline, "fetch_regulation", _fake_fetch_regulation([]))
+    delays: list[float] = []
+
+    pipeline.fetch_regulations(_SPECS, paths, None, delay=2.0, sleep=delays.append)
+
+    assert delays == [2.0]
+
+
+def test_parse_regulations_writes_structured(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    paths = _paths(tmp_path)
+    monkeypatch.setattr(pipeline, "fetch_regulation", _fake_fetch_regulation([]))
+    parsed_calls: list[str] = []
+    monkeypatch.setattr(pipeline, "parse_regulation", _fake_parse_regulation(parsed_calls))
+    pipeline.fetch_regulations(_SPECS, paths, None, sleep=lambda _: None)
+
+    catalog = pipeline.parse_regulations(_SPECS, paths)
+
+    assert parsed_calls == ["G0400001", "G0400069"]
+    entry = catalog.get("law_G0400001")
+    assert entry is not None
+    assert entry.status.parsed is True
+    assert entry.revision_date == date(2024, 8, 7)
+    assert paths.structured_path(REGULATIONS, "law_G0400001").is_file()
+
+
+def test_parse_regulations_is_idempotent(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    paths = _paths(tmp_path)
+    monkeypatch.setattr(pipeline, "fetch_regulation", _fake_fetch_regulation([]))
+    parsed_calls: list[str] = []
+    monkeypatch.setattr(pipeline, "parse_regulation", _fake_parse_regulation(parsed_calls))
+    pipeline.fetch_regulations(_SPECS, paths, None, sleep=lambda _: None)
+
+    pipeline.parse_regulations(_SPECS, paths)
+    pipeline.parse_regulations(_SPECS, paths)
+
+    assert len(parsed_calls) == 2
+
+
+def test_parse_regulations_skips_undownloaded(tmp_path: Path) -> None:
+    paths = _paths(tmp_path)
+
+    catalog = pipeline.parse_regulations(_SPECS, paths)
+
+    assert catalog.get("law_G0400001") is None
+    assert not paths.structured_path(REGULATIONS, "law_G0400001").is_file()
+
+
+def test_parse_regulations_requires_raw_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    paths = _paths(tmp_path)
+    monkeypatch.setattr(pipeline, "fetch_regulation", _fake_fetch_regulation([]))
+    pipeline.fetch_regulations(_SPECS, paths, None, sleep=lambda _: None)
+    raw = paths.raw_dir(REGULATIONS) / "law_G0400001.html"
+    raw.unlink()
+
+    with pytest.raises(FileNotFoundError, match="找不到法規 HTML"):
+        pipeline.parse_regulations(_SPECS, paths)
+
+
+def test_chunk_regulations_writes_chunks(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    paths = _paths(tmp_path)
+    monkeypatch.setattr(pipeline, "fetch_regulation", _fake_fetch_regulation([]))
+    monkeypatch.setattr(pipeline, "parse_regulation", _fake_parse_regulation([]))
+    pipeline.fetch_regulations(_SPECS, paths, None, sleep=lambda _: None)
+    pipeline.parse_regulations(_SPECS, paths)
+
+    catalog = pipeline.chunk_regulations(_SPECS, paths, counter=len)
+
+    entry = catalog.get("law_G0400001")
+    assert entry is not None
+    assert entry.status.chunked is True
+    assert entry.chunk_count is not None and entry.chunk_count > 0
+    assert paths.chunks_path(REGULATIONS, "law_G0400001").is_file()
+
+
+def test_chunk_regulations_resets_indexed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    paths = _paths(tmp_path)
+    monkeypatch.setattr(pipeline, "fetch_regulation", _fake_fetch_regulation([]))
+    monkeypatch.setattr(pipeline, "parse_regulation", _fake_parse_regulation([]))
+    pipeline.fetch_regulations(_SPECS, paths, None, sleep=lambda _: None)
+    pipeline.parse_regulations(_SPECS, paths)
+    doc_id = "law_G0400001"
+    catalog = pipeline.chunk_regulations(_SPECS, paths, counter=len)
+    entry = catalog.get(doc_id)
+    assert entry is not None
+    catalog.upsert(
+        doc_id,
+        entry.model_copy(update={"status": entry.status.model_copy(update={"indexed": True})}),
+    )
+    write_catalog(paths.catalog_path(REGULATIONS_CATALOG), catalog)
+
+    catalog = pipeline.chunk_regulations(_SPECS, paths, counter=len, force=True)
+
+    entry = catalog.get(doc_id)
+    assert entry is not None
+    assert entry.status.chunked is True
+    assert entry.status.indexed is False
+
+
+def test_chunk_regulations_is_idempotent(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    paths = _paths(tmp_path)
+    monkeypatch.setattr(pipeline, "fetch_regulation", _fake_fetch_regulation([]))
+    monkeypatch.setattr(pipeline, "parse_regulation", _fake_parse_regulation([]))
+    pipeline.fetch_regulations(_SPECS, paths, None, sleep=lambda _: None)
+    pipeline.parse_regulations(_SPECS, paths)
+    pipeline.chunk_regulations(_SPECS, paths, counter=len)
+    chunks_file = paths.chunks_path(REGULATIONS, "law_G0400001")
+    before = chunks_file.read_bytes()
+
+    pipeline.chunk_regulations(_SPECS, paths, counter=len)
+
+    assert chunks_file.read_bytes() == before
+
+
+def test_chunk_regulations_skips_unparsed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    paths = _paths(tmp_path)
+    monkeypatch.setattr(pipeline, "fetch_regulation", _fake_fetch_regulation([]))
+    pipeline.fetch_regulations(_SPECS, paths, None, sleep=lambda _: None)
+
+    catalog = pipeline.chunk_regulations(_SPECS, paths, counter=len)
+
+    entry = catalog.get("law_G0400001")
+    assert entry is not None
+    assert entry.status.chunked is False
+    assert not paths.chunks_path(REGULATIONS, "law_G0400001").is_file()
