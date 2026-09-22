@@ -7,23 +7,33 @@ from collections.abc import Sequence
 
 from finrag.config import StoragePaths
 from finrag.http import build_client
-from finrag.ingest.pipeline import chunk_documents, fetch_reports, parse_documents
+from finrag.ingest.pipeline import (
+    chunk_documents,
+    chunk_regulations,
+    fetch_regulations,
+    fetch_reports,
+    parse_documents,
+    parse_regulations,
+)
 from finrag.ingest.targets import (
     DEFAULT_QUARTERS,
     DEFAULT_TICKERS,
     DEFAULT_YEARS,
     build_targets,
 )
-from finrag.models.domain import ReportTarget
+from finrag.models.domain import LAW_SPECS, LawSpec, ReportTarget
 from finrag.text import default_token_counter
+
+SOURCES: tuple[str, ...] = ("reports", "laws", "all")
 
 
 def build_parser() -> argparse.ArgumentParser:
     """建立指令列解析器。"""
-    parser = argparse.ArgumentParser(prog="finrag", description="財報入庫")
+    parser = argparse.ArgumentParser(prog="finrag", description="財報與法規入庫")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     def add_common(sub: argparse.ArgumentParser) -> None:
+        sub.add_argument("--source", choices=SOURCES, default="reports")
         sub.add_argument("--ticker", nargs="+", default=list(DEFAULT_TICKERS))
         sub.add_argument("--years", nargs="+", type=int, default=list(DEFAULT_YEARS))
         sub.add_argument("--quarters", nargs="+", default=list(DEFAULT_QUARTERS))
@@ -45,7 +55,13 @@ def _paths(args: argparse.Namespace) -> StoragePaths:
     return StoragePaths()
 
 
-def _dispatch(
+def _sources(source: str) -> tuple[str, ...]:
+    if source == "all":
+        return ("reports", "laws")
+    return (source,)
+
+
+def _dispatch_reports(
     command: str,
     args: argparse.Namespace,
     paths: StoragePaths,
@@ -60,21 +76,43 @@ def _dispatch(
         chunk_documents(targets, paths, counter=default_token_counter(), force=args.force)
 
 
+def _dispatch_regulations(
+    command: str,
+    args: argparse.Namespace,
+    paths: StoragePaths,
+    specs: Sequence[LawSpec],
+) -> None:
+    if command == "fetch":
+        with build_client() as client:
+            fetch_regulations(specs, paths, client, force=args.force)
+    elif command == "parse":
+        parse_regulations(specs, paths, force=args.force)
+    else:
+        chunk_regulations(specs, paths, counter=default_token_counter(), force=args.force)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """執行指令列入口。"""
     parser = build_parser()
     args = parser.parse_args(argv)
-
     paths = _paths(args)
-    try:
-        targets = build_targets(args.ticker, args.years, args.quarters)
-    except ValueError as error:
-        parser.error(str(error))
+    sources = _sources(args.source)
+
+    targets: list[ReportTarget] = []
+    if "reports" in sources:
+        try:
+            targets = build_targets(args.ticker, args.years, args.quarters)
+        except ValueError as error:
+            parser.error(str(error))
 
     commands = ("fetch", "parse", "chunk") if args.command == "all" else (args.command,)
     for command in commands:
-        _dispatch(command, args, paths, targets)
-        print(f"{command}: {len(targets)} target(s)")
+        if "reports" in sources:
+            _dispatch_reports(command, args, paths, targets)
+            print(f"{command}: {len(targets)} target(s)")
+        if "laws" in sources:
+            _dispatch_regulations(command, args, paths, LAW_SPECS)
+            print(f"{command}: {len(LAW_SPECS)} regulation(s)")
     return 0
 
 

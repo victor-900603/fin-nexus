@@ -35,6 +35,12 @@ uv run finrag chunk   # 切分為 parent-child 切片
 uv run finrag all     # 依序執行 fetch、parse、chunk
 ```
 
+以 `--source` 選擇資料來源，預設 `reports`（財報），可設為 `laws`（法規）或 `all`（兩者）。
+
+```powershell
+uv run finrag all --source laws   # 擷取、解析、切分法規
+```
+
 ## 開發指令
 
 ```powershell

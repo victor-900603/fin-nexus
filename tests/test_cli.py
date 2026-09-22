@@ -35,6 +35,7 @@ def test_default_arguments() -> None:
     assert args.ticker == ["2330", "2303", "2454"]
     assert args.years == [2023, 2024, 2025]
     assert args.quarters == ["Q1", "Q2", "Q3", "Q4"]
+    assert args.source == "reports"
     assert args.force is False
     assert args.delay == 20.0
 
@@ -142,3 +143,77 @@ def test_main_reports_target_count(
     cli.main(["chunk", "--ticker", "2330", "--years", "2023", "--quarters", "Q1", "Q2"])
 
     assert capsys.readouterr().out.strip() == "chunk: 2 target(s)"
+
+
+def test_default_source_is_reports() -> None:
+    assert cli.build_parser().parse_args(["fetch"]).source == "reports"
+
+
+def test_source_laws_runs_regulations(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    order: list[str] = []
+    for name in ("fetch_regulations", "parse_regulations", "chunk_regulations"):
+        monkeypatch.setattr(
+            cli,
+            name,
+            (lambda label: lambda *args, **kwargs: order.append(label))(name),
+        )
+    _null_client(monkeypatch)
+
+    code = cli.main(["all", "--source", "laws"])
+
+    assert code == 0
+    assert order == ["fetch_regulations", "parse_regulations", "chunk_regulations"]
+    lines = capsys.readouterr().out.strip().splitlines()
+    assert lines == [
+        "fetch: 3 regulation(s)",
+        "parse: 3 regulation(s)",
+        "chunk: 3 regulation(s)",
+    ]
+
+
+def test_source_all_runs_both(monkeypatch: pytest.MonkeyPatch) -> None:
+    order: list[str] = []
+    names = (
+        "fetch_reports",
+        "fetch_regulations",
+        "parse_documents",
+        "parse_regulations",
+        "chunk_documents",
+        "chunk_regulations",
+    )
+    for name in names:
+        monkeypatch.setattr(
+            cli,
+            name,
+            (lambda label: lambda *args, **kwargs: order.append(label))(name),
+        )
+    _null_client(monkeypatch)
+
+    cli.main(
+        ["all", "--source", "all", "--ticker", "2330", "--years", "2023", "--quarters", "Q1"]
+    )
+
+    assert order == list(names)
+
+
+def test_source_laws_fetch_uses_default_delay(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[tuple[str, Any]] = []
+    _fake(monkeypatch, "fetch_regulations", calls)
+    _null_client(monkeypatch)
+
+    cli.main(["fetch", "--source", "laws"])
+
+    (name, (_, kwargs)), = calls
+    assert name == "fetch_regulations"
+    assert kwargs == {"force": False}
+
+
+def test_source_laws_skips_ticker_validation(monkeypatch: pytest.MonkeyPatch) -> None:
+    _fake(monkeypatch, "chunk_regulations", [])
+    _null_client(monkeypatch)
+
+    code = cli.main(["chunk", "--source", "laws", "--ticker", "233"])
+
+    assert code == 0
