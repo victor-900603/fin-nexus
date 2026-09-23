@@ -13,6 +13,7 @@ from finrag.config import (
     REPORTS_CATALOG,
     LogConfig,
     ParseConfig,
+    QdrantConfig,
     StoragePaths,
 )
 from finrag.logging import configure_logging
@@ -23,6 +24,9 @@ _FINRAG_ENV = (
     "FINRAG_MINERU_API_KEY",
     "FINRAG_MINERU_REMOTE_URL",
     "FINRAG_DATA_DIR",
+    "FINRAG_QDRANT_URL",
+    "FINRAG_QDRANT_API_KEY",
+    "FINRAG_QDRANT_TIMEOUT",
     "FINRAG_LOG_LEVEL",
 )
 
@@ -147,6 +151,38 @@ def test_storage_blank_data_dir_uses_default(monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.setenv("FINRAG_DATA_DIR", "  ")
 
     assert StoragePaths(_env_file=None).data_dir == Path("data")
+
+
+def test_qdrant_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    _clear_environment(monkeypatch)
+
+    config = QdrantConfig(_env_file=None)
+
+    assert config.url == "http://localhost:6333"
+    assert config.api_key is None
+    assert config.timeout == 10
+
+
+def test_qdrant_reads_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("FINRAG_QDRANT_URL", "http://qdrant:6333")
+    monkeypatch.setenv("FINRAG_QDRANT_API_KEY", " secret ")
+    monkeypatch.setenv("FINRAG_QDRANT_TIMEOUT", "30")
+
+    config = QdrantConfig(_env_file=None)
+
+    assert config.url == "http://qdrant:6333"
+    assert config.api_key == "secret"
+    assert config.timeout == 30
+
+
+def test_qdrant_blank_values_use_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("FINRAG_QDRANT_URL", "  ")
+    monkeypatch.setenv("FINRAG_QDRANT_API_KEY", "")
+
+    config = QdrantConfig(_env_file=None)
+
+    assert config.url == "http://localhost:6333"
+    assert config.api_key is None
 
 
 def test_log_config_defaults(monkeypatch: pytest.MonkeyPatch) -> None:

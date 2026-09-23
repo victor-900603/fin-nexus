@@ -20,6 +20,7 @@ REPORTS_CATALOG = "reports_catalog.json"
 REGULATIONS_CATALOG = "regulations_catalog.json"
 
 DEFAULT_DATA_DIR = Path("data")
+DEFAULT_QDRANT_URL = "http://localhost:6333"
 
 DEFAULT_LOG_LEVEL = "INFO"
 
@@ -61,6 +62,35 @@ class ParseConfig(BaseSettings):
     @field_validator("api_key", "remote_url", mode="before")
     @classmethod
     def _blank_to_none(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return value.strip() or None
+        return value
+
+
+class QdrantConfig(BaseSettings):
+    """Qdrant 連線設定。"""
+
+    model_config = SettingsConfigDict(
+        env_prefix="FINRAG_QDRANT_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    url: str = DEFAULT_QDRANT_URL
+    api_key: str | None = None
+    timeout: int = 10
+
+    @field_validator("url", mode="before")
+    @classmethod
+    def _default_url(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return value.strip() or DEFAULT_QDRANT_URL
+        return value
+
+    @field_validator("api_key", mode="before")
+    @classmethod
+    def _blank_api_key(cls, value: Any) -> Any:
         if isinstance(value, str):
             return value.strip() or None
         return value

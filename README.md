@@ -17,6 +17,16 @@ uv sync
 
 資料落盤路徑可透過 `FINRAG_DATA_DIR` 覆寫，預設為 `data/`。
 
+## Qdrant
+
+以 Docker Compose 啟動 Qdrant 並初始化 Collection：
+
+```powershell
+docker compose up -d
+```
+
+預設連線 `http://localhost:6333`，可透過 `FINRAG_QDRANT_URL`、`FINRAG_QDRANT_API_KEY`、`FINRAG_QDRANT_TIMEOUT` 覆寫。
+
 ## MinerU 解析
 
 預設以遠端模式呼叫 MinerU 解析財報 PDF，可透過下列環境變數設定：
