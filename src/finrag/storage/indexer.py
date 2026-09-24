@@ -46,6 +46,21 @@ def _upsert(
         )
 
 
+def _delete_document(client: QdrantClient, collection: str, doc_id: str) -> None:
+    """移除同一文件既有的向量，避免重切後殘留舊切片。"""
+    client.delete(
+        collection_name=collection,
+        points_selector=models.FilterSelector(
+            filter=models.Filter(
+                must=[
+                    models.FieldCondition(key="doc_id", match=models.MatchValue(value=doc_id))
+                ]
+            )
+        ),
+        wait=True,
+    )
+
+
 def index_reports(
     doc_ids: Sequence[str],
     paths: StoragePaths,
@@ -62,7 +77,7 @@ def index_reports(
     for doc_id in doc_ids:
         entry = catalog.get(doc_id)
         if entry is None or not entry.status.chunked:
-            raise FileNotFoundError(f"尚未切片財報：{doc_id}")
+            continue
         if entry.status.indexed and not force:
             continue
         chunks = read_jsonl(paths.chunks_path(FINANCIAL_REPORTS, doc_id), Chunk)
@@ -71,6 +86,7 @@ def index_reports(
             report_point(chunk, vector, weights)
             for chunk, vector, weights in zip(chunks, dense, sparse, strict=True)
         ]
+        _delete_document(client, REPORTS_COLLECTION, doc_id)
         _upsert(client, REPORTS_COLLECTION, points, batch_size)
         status = entry.status.model_copy(update={"indexed": True})
         catalog.upsert(
@@ -97,7 +113,7 @@ def index_regulations(
     for doc_id in doc_ids:
         entry = catalog.get(doc_id)
         if entry is None or not entry.status.chunked:
-            raise FileNotFoundError(f"尚未切片法規：{doc_id}")
+            continue
         if entry.status.indexed and not force:
             continue
         chunks = read_jsonl(paths.chunks_path(REGULATIONS, doc_id), RegulationChunk)
@@ -106,6 +122,7 @@ def index_regulations(
             regulation_point(chunk, vector, weights)
             for chunk, vector, weights in zip(chunks, dense, sparse, strict=True)
         ]
+        _delete_document(client, REGULATIONS_COLLECTION, doc_id)
         _upsert(client, REGULATIONS_COLLECTION, points, batch_size)
         status = entry.status.model_copy(update={"indexed": True})
         catalog.upsert(

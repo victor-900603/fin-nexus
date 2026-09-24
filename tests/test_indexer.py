@@ -6,7 +6,6 @@ from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
 
-import pytest
 from qdrant_client import QdrantClient, models
 
 from finrag.config import (
@@ -183,13 +182,15 @@ def test_index_reports_force_reindexes(tmp_path: Path) -> None:
     assert embedder.calls == 2
 
 
-def test_index_reports_requires_chunked(tmp_path: Path) -> None:
+def test_index_reports_skips_unchunked(tmp_path: Path) -> None:
     paths = _paths(tmp_path)
     client = QdrantClient(":memory:")
     embedder = _FakeEmbedder()
 
-    with pytest.raises(FileNotFoundError, match="尚未切片財報"):
-        indexer.index_reports([_DOC_ID], paths, client, embedder=embedder)
+    indexer.index_reports([_DOC_ID], paths, client, embedder=embedder)
+
+    assert embedder.calls == 0
+    assert client.count(REPORTS_COLLECTION).count == 0
 
 
 def test_index_reports_batches(tmp_path: Path) -> None:
@@ -200,6 +201,23 @@ def test_index_reports_batches(tmp_path: Path) -> None:
     indexer.index_reports([_DOC_ID], paths, client, embedder=_FakeEmbedder(), batch_size=1)
 
     assert client.count(REPORTS_COLLECTION).count == 2
+
+
+def test_index_reports_removes_stale_points(tmp_path: Path) -> None:
+    paths = _paths(tmp_path)
+    _write_reports(paths, [_report_chunk("p0"), _report_chunk("p0:c0", "p0")])
+    client = QdrantClient(":memory:")
+    embedder = _FakeEmbedder()
+
+    indexer.index_reports([_DOC_ID], paths, client, embedder=embedder)
+    assert client.count(REPORTS_COLLECTION).count == 2
+
+    _write_reports(paths, [_report_chunk("p0")])
+    indexer.index_reports([_DOC_ID], paths, client, embedder=embedder, force=True)
+
+    assert client.count(REPORTS_COLLECTION).count == 1
+    records, _ = client.scroll(REPORTS_COLLECTION, limit=10, with_payload=True)
+    assert (records[0].payload or {})["chunk_id"] == "p0"
 
 
 def test_index_regulations_writes_points(tmp_path: Path) -> None:
@@ -221,11 +239,29 @@ def test_index_regulations_writes_points(tmp_path: Path) -> None:
     assert payload["doc_type"] == "regulation"
 
 
-def test_index_regulations_requires_chunked(tmp_path: Path) -> None:
+def test_index_regulations_skips_unchunked(tmp_path: Path) -> None:
     paths = _paths(tmp_path)
     client = QdrantClient(":memory:")
     embedder = _FakeEmbedder()
 
-    with pytest.raises(FileNotFoundError, match="尚未切片法規"):
-        indexer.index_regulations([_LAW_DOC_ID], paths, client, embedder=embedder)
+    indexer.index_regulations([_LAW_DOC_ID], paths, client, embedder=embedder)
 
+    assert embedder.calls == 0
+    assert client.count(REGULATIONS_COLLECTION).count == 0
+
+
+def test_index_regulations_removes_stale_points(tmp_path: Path) -> None:
+    paths = _paths(tmp_path)
+    _write_regulations(paths, [_regulation_chunk("p0"), _regulation_chunk("p0:c0", "p0")])
+    client = QdrantClient(":memory:")
+    embedder = _FakeEmbedder()
+
+    indexer.index_regulations([_LAW_DOC_ID], paths, client, embedder=embedder)
+    assert client.count(REGULATIONS_COLLECTION).count == 2
+
+    _write_regulations(paths, [_regulation_chunk("p0")])
+    indexer.index_regulations([_LAW_DOC_ID], paths, client, embedder=embedder, force=True)
+
+    assert client.count(REGULATIONS_COLLECTION).count == 1
+    records, _ = client.scroll(REGULATIONS_COLLECTION, limit=10, with_payload=True)
+    assert (records[0].payload or {})["chunk_id"] == "p0"
