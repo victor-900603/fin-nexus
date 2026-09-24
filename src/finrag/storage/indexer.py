@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
+from pathlib import Path
 
 from qdrant_client import QdrantClient, models
 
@@ -15,6 +16,7 @@ from finrag.config import (
     StoragePaths,
 )
 from finrag.models import (
+    Catalog,
     Chunk,
     RegulationCatalog,
     RegulationChunk,
@@ -30,6 +32,8 @@ from finrag.storage.repository import read_catalog, read_jsonl, write_catalog
 from finrag.storage.schema import regulation_point, report_point
 
 DEFAULT_BATCH_SIZE = 64
+
+BuildPoints = Callable[[str], list[models.PointStruct]]
 
 
 def _upsert(
@@ -61,6 +65,38 @@ def _delete_document(client: QdrantClient, collection: str, doc_id: str) -> None
     )
 
 
+def _index_documents[CatalogT: Catalog](
+    doc_ids: Sequence[str],
+    catalog_path: Path,
+    client: QdrantClient,
+    *,
+    collection: str,
+    catalog_type: type[CatalogT],
+    build_points: BuildPoints,
+    force: bool,
+    batch_size: int,
+) -> CatalogT:
+    """依 doc_id 向量化已切片文件並寫入 Qdrant，更新清單。"""
+    ensure_storage(client)
+    catalog = read_catalog(catalog_path, catalog_type)
+    for doc_id in doc_ids:
+        entry = catalog.get(doc_id)
+        if entry is None or not entry.status.chunked:
+            continue
+        if entry.status.indexed and not force:
+            continue
+        points = build_points(doc_id)
+        _delete_document(client, collection, doc_id)
+        _upsert(client, collection, points, batch_size)
+        status = entry.status.model_copy(update={"indexed": True})
+        catalog.upsert(
+            doc_id,
+            entry.model_copy(update={"status": status, "updated_at": datetime.now(UTC)}),
+        )
+        write_catalog(catalog_path, catalog)
+    return catalog
+
+
 def index_reports(
     doc_ids: Sequence[str],
     paths: StoragePaths,
@@ -71,30 +107,25 @@ def index_reports(
     batch_size: int = DEFAULT_BATCH_SIZE,
 ) -> ReportCatalog:
     """將財報切片向量化並寫入 Qdrant。"""
-    ensure_storage(client)
-    catalog_path = paths.catalog_path(REPORTS_CATALOG)
-    catalog = read_catalog(catalog_path, ReportCatalog)
-    for doc_id in doc_ids:
-        entry = catalog.get(doc_id)
-        if entry is None or not entry.status.chunked:
-            continue
-        if entry.status.indexed and not force:
-            continue
+
+    def build_points(doc_id: str) -> list[models.PointStruct]:
         chunks = read_jsonl(paths.chunks_path(FINANCIAL_REPORTS, doc_id), Chunk)
         dense, sparse = embedder.embed([chunk.text for chunk in chunks])
-        points = [
+        return [
             report_point(chunk, vector, weights)
             for chunk, vector, weights in zip(chunks, dense, sparse, strict=True)
         ]
-        _delete_document(client, REPORTS_COLLECTION, doc_id)
-        _upsert(client, REPORTS_COLLECTION, points, batch_size)
-        status = entry.status.model_copy(update={"indexed": True})
-        catalog.upsert(
-            doc_id,
-            entry.model_copy(update={"status": status, "updated_at": datetime.now(UTC)}),
-        )
-        write_catalog(catalog_path, catalog)
-    return catalog
+
+    return _index_documents(
+        doc_ids,
+        paths.catalog_path(REPORTS_CATALOG),
+        client,
+        collection=REPORTS_COLLECTION,
+        catalog_type=ReportCatalog,
+        build_points=build_points,
+        force=force,
+        batch_size=batch_size,
+    )
 
 
 def index_regulations(
@@ -107,27 +138,22 @@ def index_regulations(
     batch_size: int = DEFAULT_BATCH_SIZE,
 ) -> RegulationCatalog:
     """將法規切片向量化並寫入 Qdrant。"""
-    ensure_storage(client)
-    catalog_path = paths.catalog_path(REGULATIONS_CATALOG)
-    catalog = read_catalog(catalog_path, RegulationCatalog)
-    for doc_id in doc_ids:
-        entry = catalog.get(doc_id)
-        if entry is None or not entry.status.chunked:
-            continue
-        if entry.status.indexed and not force:
-            continue
+
+    def build_points(doc_id: str) -> list[models.PointStruct]:
         chunks = read_jsonl(paths.chunks_path(REGULATIONS, doc_id), RegulationChunk)
         dense, sparse = embedder.embed([chunk.text for chunk in chunks])
-        points = [
+        return [
             regulation_point(chunk, vector, weights)
             for chunk, vector, weights in zip(chunks, dense, sparse, strict=True)
         ]
-        _delete_document(client, REGULATIONS_COLLECTION, doc_id)
-        _upsert(client, REGULATIONS_COLLECTION, points, batch_size)
-        status = entry.status.model_copy(update={"indexed": True})
-        catalog.upsert(
-            doc_id,
-            entry.model_copy(update={"status": status, "updated_at": datetime.now(UTC)}),
-        )
-        write_catalog(catalog_path, catalog)
-    return catalog
+
+    return _index_documents(
+        doc_ids,
+        paths.catalog_path(REGULATIONS_CATALOG),
+        client,
+        collection=REGULATIONS_COLLECTION,
+        catalog_type=RegulationCatalog,
+        build_points=build_points,
+        force=force,
+        batch_size=batch_size,
+    )
