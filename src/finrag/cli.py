@@ -22,6 +22,8 @@ from finrag.ingest.targets import (
     build_targets,
 )
 from finrag.models.domain import LAW_SPECS, LawSpec, ReportTarget
+from finrag.storage.indexer import index_regulations, index_reports
+from finrag.storage.qdrant_client import build_client as build_qdrant_client
 from finrag.text import default_token_counter
 
 SOURCES: tuple[str, ...] = ("reports", "laws", "all")
@@ -40,11 +42,13 @@ def build_parser() -> argparse.ArgumentParser:
         sub.add_argument("--data-dir", default=None)
         sub.add_argument("--force", action="store_true")
 
-    for name in ("fetch", "parse", "chunk", "all"):
+    for name in ("fetch", "parse", "chunk", "index", "all"):
         sub = subparsers.add_parser(name)
         add_common(sub)
         if name in ("fetch", "all"):
             sub.add_argument("--delay", type=float, default=20.0)
+        if name == "index":
+            sub.add_argument("--batch-size", type=int, default=64)
 
     return parser
 
@@ -72,8 +76,16 @@ def _dispatch_reports(
             fetch_reports(targets, paths, client, force=args.force, delay=args.delay)
     elif command == "parse":
         parse_documents(targets, paths, force=args.force)
-    else:
+    elif command == "chunk":
         chunk_documents(targets, paths, counter=default_token_counter(), force=args.force)
+    else:
+        qdrant = build_qdrant_client()
+        try:
+            index_reports(
+                targets, paths, qdrant, force=args.force, batch_size=args.batch_size
+            )
+        finally:
+            qdrant.close()
 
 
 def _dispatch_regulations(
@@ -87,8 +99,16 @@ def _dispatch_regulations(
             fetch_regulations(specs, paths, client, force=args.force)
     elif command == "parse":
         parse_regulations(specs, paths, force=args.force)
-    else:
+    elif command == "chunk":
         chunk_regulations(specs, paths, counter=default_token_counter(), force=args.force)
+    else:
+        qdrant = build_qdrant_client()
+        try:
+            index_regulations(
+                specs, paths, qdrant, force=args.force, batch_size=args.batch_size
+            )
+        finally:
+            qdrant.close()
 
 
 def main(argv: Sequence[str] | None = None) -> int:
