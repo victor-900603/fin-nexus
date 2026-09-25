@@ -1,0 +1,70 @@
+{
+  "營業收入淨額": [
+    "營業收入",
+    "營收",
+    "銷貨收入",
+    "銷貨淨額",
+    "營業收入合計",
+    "Net Revenue",
+    "Revenue"
+  ],
+  "營業成本": [
+    "銷貨成本",
+    "營業成本合計",
+    "Cost of Revenue",
+    "Cost of Goods Sold",
+    "COGS"
+  ],
+  "營業毛利": ["毛利", "銷貨毛利", "Gross Profit"],
+  "營業費用": ["營業費用合計", "Operating Expenses", "OPEX"],
+  "研究發展費用": ["研發費用", "研發支出", "研究發展支出", "R&D Expense"],
+  "推銷費用": ["銷售費用", "推銷費用合計", "Selling Expenses"],
+  "管理費用": ["行政管理費用", "管理費用合計", "General and Administrative"],
+  "營業利益": [
+    "營業淨利",
+    "營業利益合計",
+    "Operating Income",
+    "Operating Profit"
+  ],
+  "稅前淨利": [
+    "稅前利益",
+    "稅前純益",
+    "Income Before Tax",
+    "Pre-tax Income"
+  ],
+  "本期淨利": [
+    "本期純益",
+    "稅後淨利",
+    "本期淨利合計",
+    "Net Income",
+    "Net Profit"
+  ],
+  "每股盈餘": ["EPS", "每股獲利", "Earnings Per Share"],
+  "資產總額": ["資產總計", "總資產", "Total Assets"],
+  "負債總額": ["負債總計", "總負債", "Total Liabilities"],
+  "權益總額": [
+    "權益總計",
+    "股東權益",
+    "業主權益",
+    "Total Equity",
+    "Shareholders' Equity"
+  ],
+  "現金及約當現金": [
+    "現金及約當現金合計",
+    "約當現金",
+    "Cash and Cash Equivalents"
+  ],
+  "應收帳款淨額": ["應收帳款", "Accounts Receivable"],
+  "存貨": ["存貨淨額", "Inventory"],
+  "營業活動之淨現金流入": [
+    "營業活動現金流量",
+    "營運現金流",
+    "Operating Cash Flow"
+  ],
+  "資本支出": [
+    "資本支出淨額",
+    "購置不動產廠房及設備",
+    "Capital Expenditure"
+  ],
+  "自由現金流量": ["自由現金流", "Free Cash Flow", "FCF"]
+}
