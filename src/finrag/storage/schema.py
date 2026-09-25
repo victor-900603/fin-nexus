@@ -84,25 +84,37 @@ def regulation_point(
     )
 
 
+def _field_condition(key: str, value: Any) -> models.Condition | None:
+    if value is None:
+        return None
+    if isinstance(value, (str, int)):
+        return models.FieldCondition(key=key, match=models.MatchValue(value=value))
+    values = list(value)
+    if not values:
+        return None
+    if len(values) == 1:
+        return models.FieldCondition(key=key, match=models.MatchValue(value=values[0]))
+    return models.FieldCondition(key=key, match=models.MatchAny(any=values))
+
+
 def _conditions(**fields: Any) -> list[models.Condition]:
     conditions: list[models.Condition] = []
     for key, value in fields.items():
-        if value is not None:
-            conditions.append(
-                models.FieldCondition(key=key, match=models.MatchValue(value=value))
-            )
+        condition = _field_condition(key, value)
+        if condition is not None:
+            conditions.append(condition)
     return conditions
 
 
 def report_filter(
     *,
-    ticker: str | None = None,
-    fiscal_year: int | None = None,
-    quarter: str | None = None,
-    report_period: str | None = None,
-    doc_id: str | None = None,
+    ticker: str | Sequence[str] | None = None,
+    fiscal_year: int | Sequence[int] | None = None,
+    quarter: str | Sequence[str] | None = None,
+    report_period: str | Sequence[str] | None = None,
+    doc_id: str | Sequence[str] | None = None,
 ) -> models.Filter | None:
-    """財報查詢的 Payload Filter。"""
+    """財報查詢的 Payload Filter；同欄多值為 OR，跨欄為 AND。"""
     conditions = _conditions(
         ticker=ticker,
         fiscal_year=fiscal_year,
@@ -115,12 +127,12 @@ def report_filter(
 
 def regulation_filter(
     *,
-    reg_pcode: str | None = None,
-    article_no: str | None = None,
-    chapter: str | None = None,
-    doc_id: str | None = None,
+    reg_pcode: str | Sequence[str] | None = None,
+    article_no: str | Sequence[str] | None = None,
+    chapter: str | Sequence[str] | None = None,
+    doc_id: str | Sequence[str] | None = None,
 ) -> models.Filter | None:
-    """法規查詢的 Payload Filter。"""
+    """法規查詢的 Payload Filter；同欄多值為 OR，跨欄為 AND。"""
     conditions = _conditions(
         reg_pcode=reg_pcode,
         article_no=article_no,

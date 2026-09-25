@@ -136,3 +136,34 @@ def test_regulation_filter_builds_conditions() -> None:
 
 def test_regulation_filter_none_when_empty() -> None:
     assert schema.regulation_filter() is None
+
+
+def test_report_filter_multi_value_uses_match_any() -> None:
+    result = schema.report_filter(ticker=["2330", "2303"])
+
+    assert result is not None
+    condition = result.must[0]
+    assert isinstance(condition, models.FieldCondition)
+    assert condition.match == models.MatchAny(any=["2330", "2303"])
+
+
+def test_report_filter_single_element_sequence_uses_match_value() -> None:
+    result = schema.report_filter(quarter=["Q1"])
+
+    assert result is not None
+    condition = result.must[0]
+    assert isinstance(condition, models.FieldCondition)
+    assert condition.match == models.MatchValue(value="Q1")
+
+
+def test_report_filter_ignores_empty_sequence() -> None:
+    assert schema.report_filter(ticker=[]) is None
+
+
+def test_regulation_filter_multi_value_uses_match_any() -> None:
+    result = schema.regulation_filter(reg_pcode=["G0400001", "G0400069"])
+
+    assert result is not None
+    condition = result.must[0]
+    assert isinstance(condition, models.FieldCondition)
+    assert condition.match == models.MatchAny(any=["G0400001", "G0400069"])
