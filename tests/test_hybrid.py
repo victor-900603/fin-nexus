@@ -110,6 +110,24 @@ def test_embedder_called_once_with_query() -> None:
     assert embedder.calls == [["台積電 2024 Q1 營收"]]
 
 
+def test_hybrid_search_embeds_sparse_query_separately() -> None:
+    client = _FakeClient(_points())
+    embedder = _FakeEmbedder()
+
+    search(_hybrid_plan(), client, embedder=embedder)
+
+    assert embedder.calls == [["台積電 2024 Q1 營收", "營業收入淨額 營業收入 營收"]]
+
+
+def test_hybrid_search_reuses_query_when_sparse_query_is_same() -> None:
+    client = _FakeClient(_points())
+    embedder = _FakeEmbedder()
+
+    search(_hybrid_plan(sparse_query="台積電 2024 Q1 營收"), client, embedder=embedder)
+
+    assert embedder.calls == [["台積電 2024 Q1 營收"]]
+
+
 def test_limit_overrides_top_k() -> None:
     client = _FakeClient(_points())
     embedder = _FakeEmbedder()

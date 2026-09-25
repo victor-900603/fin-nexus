@@ -33,9 +33,12 @@ def search(
 ) -> list[SearchHit]:
     """依路由計畫執行檢索，回傳 Top-K 候選。"""
     top_k = limit if limit is not None else plan.top_k
-    dense_list, sparse_list = embedder.embed([plan.query])
+    texts = [plan.query]
+    if plan.use_sparse and plan.sparse_query != plan.query:
+        texts.append(plan.sparse_query)
+    dense_list, sparse_list = embedder.embed(texts)
     dense = dense_list[0]
-    sparse = sparse_list[0]
+    sparse = sparse_list[-1]
 
     if plan.use_sparse:
         prefetch_limit = top_k * PREFETCH_FACTOR
