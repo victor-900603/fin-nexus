@@ -53,6 +53,14 @@ def test_annual_keyword() -> None:
     assert analysis.report_period is ReportPeriod.ANNUAL
 
 
+def test_year_end_keyword_is_annual() -> None:
+    analysis = analyze("台積電2024年底的資產總額", _ONTO)
+
+    assert analysis.fiscal_years == [2024]
+    assert analysis.quarters == []
+    assert analysis.report_period is ReportPeriod.ANNUAL
+
+
 def test_matches_regulation() -> None:
     analysis = analyze("證券交易法第14條", _ONTO)
 

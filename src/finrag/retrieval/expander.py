@@ -14,7 +14,7 @@ _YEAR_RE = re.compile(r"(?<!\d)(19\d{2}|20\d{2})(?!\d)")
 _ROC_YEAR_RE = re.compile(r"民國\s*(\d{2,3})\s*年")
 _QUARTER_RE = re.compile(r"Q\s*([1-4])", re.IGNORECASE)
 _CN_QUARTER_RE = re.compile(r"第\s*([一二三四1234])\s*季")
-_ANNUAL_RE = re.compile(r"年度|全年|年報")
+_ANNUAL_RE = re.compile(r"年度|全年|年報|年底|年末|年終")
 _TICKER_RE = re.compile(r"(?<!\d)(\d{4})(?!\d)")
 _CN_QUARTER_DIGITS = {"一": 1, "二": 2, "三": 3, "四": 4, "1": 1, "2": 2, "3": 3, "4": 4}
 
