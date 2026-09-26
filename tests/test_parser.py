@@ -40,12 +40,96 @@ def test_middle_json_to_blocks() -> None:
     assert headings[0].level == 2
 
     tables = [block for block in blocks if block.type is BlockType.TABLE]
+    assert tables[0].text.startswith("**合併資產負債表（節錄）**")
     assert "現金及約當現金" in tables[0].text
     assert "註：單位為仟元。" in tables[0].text
     assert tables[0].page == 1
 
     assert any(block.type is BlockType.TEXT for block in blocks)
     assert all("page_number" not in block.text for block in blocks)
+
+
+def test_table_caption_is_rendered_first() -> None:
+    data = {
+        "pages": [
+            {
+                "page_idx": 0,
+                "blocks": [
+                    {
+                        "type": "table",
+                        "content": [
+                            {
+                                "type": "table_caption",
+                                "content": [{"type": "text", "content": "表一"}],
+                            },
+                            {
+                                "type": "table_body",
+                                "content": (
+                                    "<table><tr><th>項目</th></tr>"
+                                    "<tr><td>現金</td></tr></table>"
+                                ),
+                            },
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+    blocks = middle_json_to_blocks(data)
+
+    assert blocks[0].text.startswith("**表一**")
+
+
+def test_continued_table_keeps_first_caption() -> None:
+    data = {
+        "pages": [
+            {
+                "page_idx": 0,
+                "blocks": [
+                    {
+                        "type": "table",
+                        "content": [
+                            {
+                                "type": "table_caption",
+                                "content": [{"type": "text", "content": "第一頁標題"}],
+                            },
+                            {
+                                "type": "table_body",
+                                "content": (
+                                    "<table><tr><th>項目</th></tr>"
+                                    "<tr><td>現金</td></tr></table>"
+                                ),
+                            },
+                        ],
+                    }
+                ],
+            },
+            {
+                "page_idx": 1,
+                "blocks": [
+                    {
+                        "type": "table",
+                        "continues_prev": True,
+                        "content": [
+                            {
+                                "type": "table_caption",
+                                "content": [{"type": "text", "content": "第二頁標題"}],
+                            },
+                            {
+                                "type": "table_body",
+                                "content": "<table><tr><td>存貨</td></tr></table>",
+                            },
+                        ],
+                    }
+                ],
+            },
+        ]
+    }
+    blocks = middle_json_to_blocks(data)
+
+    assert len(blocks) == 1
+    assert blocks[0].text.startswith("**第一頁標題**")
+    assert "第二頁標題" not in blocks[0].text
 
 
 def test_middle_json_to_blocks_handles_missing_pages() -> None:

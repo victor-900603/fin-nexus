@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from finrag.ingest.chunker import ChunkConfig, chunk_document
+from finrag.ingest.chunker import ChunkConfig, _table_header, chunk_document
 from finrag.models import (
     Block,
     BlockType,
@@ -234,6 +234,83 @@ def test_wide_row_kept_intact_even_over_budget() -> None:
     assert len(children) == 1
     assert children[0].text == table
     assert len(children[0].text) > 40
+
+
+def test_table_title_from_caption() -> None:
+    table = "**表一**\n\n| 項目 | 金額 |\n| --- | --- |\n| 現金 | 10 |"
+    blocks = [
+        Block(type=BlockType.HEADING, text="資產負債表", level=1),
+        Block(type=BlockType.TABLE, text=table, page=5),
+    ]
+    chunks = chunk_document(_document(blocks), counter=_counter)
+
+    child = next(chunk for chunk in chunks if not chunk.metadata.is_parent)
+    assert child.metadata.table_title == "表一"
+
+
+def test_table_title_falls_back_to_section() -> None:
+    table = "| 項目 | 金額 |\n| --- | --- |\n| 現金 | 10 |"
+    blocks = [
+        Block(type=BlockType.HEADING, text="資產負債表", level=1),
+        Block(type=BlockType.TABLE, text=table, page=5),
+    ]
+    chunks = chunk_document(_document(blocks), counter=_counter)
+
+    child = next(chunk for chunk in chunks if not chunk.metadata.is_parent)
+    assert child.metadata.table_title == "資產負債表"
+
+
+def test_text_chunk_has_no_table_title() -> None:
+    chunks = chunk_document(_simple_document(), counter=_counter)
+
+    assert chunks
+    assert all(chunk.metadata.table_title is None for chunk in chunks)
+
+
+def test_table_fragments_keep_title_line() -> None:
+    caption = "**表一**"
+    rows = "".join(f"| 項目{i} | {i} |\n" for i in range(10))
+    table = f"{caption}\n\n| 項目 | 金額 |\n| --- | --- |\n{rows}"
+    blocks = [Block(type=BlockType.TABLE, text=table, page=1)]
+    chunks = chunk_document(
+        _document(blocks), counter=_counter, config=ChunkConfig(child_max=40, parent_max=1000)
+    )
+    children = [chunk for chunk in chunks if not chunk.metadata.is_parent]
+
+    assert len(children) > 1
+    assert all(caption in child.text for child in children)
+    assert all(child.metadata.table_title == "表一" for child in children)
+
+
+def test_multi_row_table_header_is_preserved() -> None:
+    header = "| 項目 | 113 年 | 112 年 |\n| 名稱 | 金額 | 金額 |\n| --- | --- | --- |"
+    rows = "".join(f"| 項目{i} | {i} | {i} |\n" for i in range(8))
+    table = f"{header}\n{rows}"
+    blocks = [Block(type=BlockType.TABLE, text=table, page=1)]
+    chunks = chunk_document(
+        _document(blocks), counter=_counter, config=ChunkConfig(child_max=60, parent_max=1000)
+    )
+    children = [chunk for chunk in chunks if not chunk.metadata.is_parent]
+
+    assert len(children) > 1
+    assert all("| 名稱 | 金額 | 金額 |" in child.text for child in children)
+    assert all("| --- | --- | --- |" in child.text for child in children)
+
+
+def test_dash_data_row_is_not_delimiter() -> None:
+    lines = ["| 項目 | 金額 |", "| --- | --- |", "| - | - |", "| 1 | 2 |"]
+
+    assert _table_header(lines) == ["| 項目 | 金額 |", "| --- | --- |"]
+
+
+def test_table_header_ignores_blank_lines() -> None:
+    lines = ["**表一**", "", "| 項目 | 金額 |", "| --- | --- |", "| 1 | 2 |"]
+
+    assert _table_header(lines) == ["**表一**", "| 項目 | 金額 |", "| --- | --- |"]
+
+
+def test_table_header_without_delimiter_falls_back_to_two_lines() -> None:
+    assert _table_header(["| a |", "| b |", "| c |"]) == ["| a |", "| b |"]
 
 
 def test_split_table_fragment_keeps_notes_and_drops_empty_pieces() -> None:

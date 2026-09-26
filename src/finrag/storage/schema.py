@@ -38,6 +38,7 @@ def report_payload(chunk: Chunk) -> dict[str, Any]:
         "fiscal_year": meta.fiscal_year,
         "quarter": meta.quarter,
         "report_period": meta.report_period.value,
+        "table_title": meta.table_title,
         "doc_type": DOC_TYPE_REPORTS,
         "text": chunk.text,
     }

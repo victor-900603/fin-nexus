@@ -24,6 +24,7 @@ class ChunkMetadata(BaseModel):
     fiscal_year: int
     quarter: Quarter
     report_period: ReportPeriod
+    table_title: str | None = None
 
 
 class Chunk(BaseModel):

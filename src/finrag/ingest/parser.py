@@ -16,6 +16,7 @@ from finrag.models import Block, BlockType, FinancialReportMeta, ParsedDocument
 
 SKIP_BLOCK_TYPES = {"image", "page_number", "header", "footer", "aside_text"}
 _TABLE_BODY = "table_body"
+_TABLE_CAPTION = "table_caption"
 _TABLE_FOOTNOTE = "table_footnote"
 _PARSE_ENGINE = "mineru"
 _MIDDLE_SCHEMA = "docvortex.middle"
@@ -101,31 +102,38 @@ def _extract_text(value: Any) -> str:
     return ""
 
 
-def _table_parts(content: Any) -> tuple[list[list[str]], list[str]]:
+def _table_parts(content: Any) -> tuple[list[list[str]], list[str], list[str]]:
     rows: list[list[str]] = []
+    captions: list[str] = []
     footnotes: list[str] = []
     if isinstance(content, str):
         text = _clean(content)
         if text:
             footnotes.append(text)
-        return rows, footnotes
+        return rows, captions, footnotes
     if not isinstance(content, list):
-        return rows, footnotes
+        return rows, captions, footnotes
     for item in content:
         if not isinstance(item, dict):
             continue
         item_type = item.get("type")
         if item_type == _TABLE_BODY:
             rows.extend(table_rows(str(item.get("content", ""))))
+        elif item_type == _TABLE_CAPTION:
+            text = _clean(_extract_text(item.get("content")))
+            if text:
+                captions.append(text)
         elif item_type == _TABLE_FOOTNOTE:
             text = _clean(_extract_text(item.get("content")))
             if text:
                 footnotes.append(text)
-    return rows, footnotes
+    return rows, captions, footnotes
 
 
-def _render_table(rows: list[list[str]], footnotes: list[str]) -> str:
+def _render_table(rows: list[list[str]], caption: str | None, footnotes: list[str]) -> str:
     parts: list[str] = []
+    if caption:
+        parts.append(f"**{caption}**")
     markdown = grid_to_markdown(rows)
     if markdown:
         parts.append(markdown)
@@ -187,6 +195,7 @@ def _iter_raw_blocks(data: dict[str, Any]) -> Iterator[tuple[dict[str, Any], int
 class _BlockBuilder:
     blocks: list[Block] = field(default_factory=list)
     _table_grid: list[list[str]] | None = None
+    _table_caption: str | None = None
     _table_footnotes: list[str] = field(default_factory=list)
 
     def add(self, raw: dict[str, Any], page: int | None) -> None:
@@ -196,8 +205,8 @@ class _BlockBuilder:
             self._add_text(raw, page)
 
     def _add_table(self, raw: dict[str, Any], page: int | None) -> None:
-        rows, footnotes = _table_parts(raw.get("content"))
-        if not rows and not footnotes:
+        rows, captions, footnotes = _table_parts(raw.get("content"))
+        if not rows and not captions and not footnotes:
             return
         previous = self.blocks[-1] if self.blocks else None
         if (
@@ -210,18 +219,23 @@ class _BlockBuilder:
             self._table_footnotes = [*self._table_footnotes, *footnotes]
             self.blocks[-1] = Block(
                 type=BlockType.TABLE,
-                text=_render_table(self._table_grid, self._table_footnotes),
+                text=_render_table(
+                    self._table_grid, self._table_caption, self._table_footnotes
+                ),
                 page=previous.page,
             )
             return
+        caption = captions[0] if captions else None
         self._table_grid = rows
+        self._table_caption = caption
         self._table_footnotes = list(footnotes)
         self.blocks.append(
-            Block(type=BlockType.TABLE, text=_render_table(rows, footnotes), page=page)
+            Block(type=BlockType.TABLE, text=_render_table(rows, caption, footnotes), page=page)
         )
 
     def _add_text(self, raw: dict[str, Any], page: int | None) -> None:
         self._table_grid = None
+        self._table_caption = None
         self._table_footnotes = []
         block = _text_block(raw.get("type"), raw, page)
         if block is None:

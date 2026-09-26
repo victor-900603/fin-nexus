@@ -18,6 +18,8 @@ from finrag.text import TokenCounter, pack_by_tokens
 
 _SENTENCE_END = re.compile(r"(?<=[。！？；!?;])")
 _TABLE_ROW = re.compile(r"^\s*\|")
+_TABLE_TITLE = re.compile(r"^\*\*(.+)\*\*$")
+_TABLE_DELIMITER_CELL = re.compile(r"^:?-{3,}:?$")
 
 
 @dataclass(frozen=True)
@@ -33,6 +35,7 @@ class _Unit:
     text: str
     is_table: bool
     page: int | None
+    title: str | None = None
 
 
 def _split_sentences(text: str) -> list[str]:
@@ -70,19 +73,45 @@ def _split_by_cells(line: str, counter: TokenCounter, max_tokens: int) -> list[s
     return ["| " + " | ".join(group) + " |" for group in groups]
 
 
+def _is_delimiter(line: str) -> bool:
+    """判斷是否為 Markdown 表格的分隔列。"""
+    stripped = line.strip()
+    if not _TABLE_ROW.match(stripped):
+        return False
+    cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+    return bool(cells) and all(_TABLE_DELIMITER_CELL.match(cell) for cell in cells)
+
+
+def _table_header(lines: Sequence[str]) -> list[str]:
+    """取表格的標題行（若存在）與表頭，範圍到分隔列為止。"""
+    content = [line for line in lines if line.strip()]
+    for index, line in enumerate(content):
+        if _is_delimiter(line):
+            return content[: index + 1]
+    return content[:2]
+
+
+def _table_title(text: str) -> str | None:
+    """取表格文字開頭的標題行。"""
+    lines = text.splitlines()
+    if not lines:
+        return None
+    match = _TABLE_TITLE.match(lines[0].strip())
+    return match.group(1) if match else None
+
+
 def _split_table_fragment(
     fragment: str, counter: TokenCounter, max_tokens: int
 ) -> list[str]:
-    lines = fragment.splitlines()
-    if len(lines) < 2:
+    lines = [line for line in fragment.splitlines() if line.strip()]
+    header_lines = _table_header(lines)
+    if len(header_lines) < 2:
         return _hard_split(fragment, counter, max_tokens)
-    header = "\n".join(lines[:2])
+    header = "\n".join(header_lines)
     budget = max(max_tokens - counter(header) - 1, 1)
     pieces: list[str] = []
-    for line in lines[2:]:
+    for line in lines[len(header_lines) :]:
         if not _TABLE_ROW.match(line):
-            if not line.strip():
-                continue
             if counter(line) <= max_tokens:
                 pieces.append(line)
             else:
@@ -106,7 +135,9 @@ def _table_fragments(text: str, counter: TokenCounter, max_tokens: int) -> list[
     if counter(text) <= max_tokens:
         return [text]
     lines = [line for line in text.splitlines() if line.strip()]
-    header = lines[:2]
+    header = _table_header(lines)
+    if len(header) < 2 or not _is_delimiter(header[-1]):
+        return _hard_split(text, counter, max_tokens)
     body = lines[len(header) :]
     pipe = [line for line in body if _TABLE_ROW.match(line)]
     notes = [line for line in body if not _TABLE_ROW.match(line)]
@@ -131,8 +162,9 @@ def _table_fragments(text: str, counter: TokenCounter, max_tokens: int) -> list[
 
 def _block_units(block: Block, counter: TokenCounter, max_tokens: int) -> list[_Unit]:
     if block.type is BlockType.TABLE:
+        title = _table_title(block.text)
         return [
-            _Unit(text=part, is_table=True, page=block.page)
+            _Unit(text=part, is_table=True, page=block.page, title=title)
             for part in _table_fragments(block.text, counter, max_tokens)
         ]
     units: list[_Unit] = []
@@ -197,6 +229,9 @@ def _make_chunk(
     text = prefix + _join_units(units)
     page = next((unit.page for unit in units if unit.page is not None), None)
     is_table = any(unit.is_table for unit in units)
+    table_title = next((unit.title for unit in units if unit.title), None)
+    if table_title is None and is_table:
+        table_title = section or None
     metadata = ChunkMetadata(
         doc_id=meta.doc_id,
         chunk_id=chunk_id,
@@ -210,6 +245,7 @@ def _make_chunk(
         fiscal_year=meta.fiscal_year,
         quarter=meta.quarter,
         report_period=meta.report_period,
+        table_title=table_title,
     )
     return Chunk(text=text, metadata=metadata)
 

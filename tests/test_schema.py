@@ -32,6 +32,7 @@ def _chunk() -> Chunk:
             fiscal_year=2024,
             quarter="Q1",
             report_period=ReportPeriod.QUARTERLY,
+            table_title="合併資產負債表",
         ),
     )
 
@@ -73,6 +74,7 @@ def test_report_payload_fields() -> None:
     assert payload["report_period"] == "quarterly"
     assert payload["is_table"] is True
     assert payload["page"] == 3
+    assert payload["table_title"] == "合併資產負債表"
     assert payload["text"] == "現金及約當現金 100"
 
 
