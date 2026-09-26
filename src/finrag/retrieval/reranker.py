@@ -61,17 +61,17 @@ def rerank(
     hits: Sequence[SearchHit],
     query: str,
     *,
-    reranker: Reranker | None = None,
-    top_k: int = RERANK_TOP_K,
+    reranker: Reranker,
+    top_k: int | None = RERANK_TOP_K,
 ) -> list[SearchHit]:
-    """對候選重新評分並取前 top_k，原檢索分數保留於 retrieval_score。"""
+    """對候選重新評分並取前 top_k（`None` 表全部），原檢索分數保留於 retrieval_score。"""
     if not hits:
         return []
-    resolved = reranker or default_reranker()
     documents = [str(hit.payload.get("text", "")) for hit in hits]
-    scores = resolved.rerank(query, documents)
+    scores = reranker.rerank(query, documents)
     ranked = sorted(zip(hits, scores, strict=True), key=lambda pair: pair[1], reverse=True)
+    selected = ranked if top_k is None else ranked[:top_k]
     return [
         hit.model_copy(update={"score": score, "retrieval_score": hit.score})
-        for hit, score in ranked[:top_k]
+        for hit, score in selected
     ]
