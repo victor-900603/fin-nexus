@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ParseMode = Literal["remote", "local"]
@@ -21,6 +21,12 @@ REGULATIONS_CATALOG = "regulations_catalog.json"
 
 DEFAULT_DATA_DIR = Path("data")
 DEFAULT_QDRANT_URL = "http://localhost:6333"
+
+DEFAULT_LLM_BASE_URL = "http://localhost:8000/v1"
+DEFAULT_LLM_TIMEOUT = 60.0
+DEFAULT_MAX_TOKENS = 1024
+DEFAULT_TEMPERATURE = 0.0
+DEFAULT_MIN_SCORE = 0.0
 
 DEFAULT_LOG_LEVEL = "INFO"
 
@@ -91,6 +97,39 @@ class QdrantConfig(BaseSettings):
     @field_validator("api_key", mode="before")
     @classmethod
     def _blank_api_key(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return value.strip() or None
+        return value
+
+
+class GenerationConfig(BaseSettings):
+    """生成層 LLM 設定：OpenAI 相容端點。"""
+
+    model_config = SettingsConfigDict(
+        env_prefix="FINRAG_LLM_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    base_url: str = DEFAULT_LLM_BASE_URL
+    api_key: str | None = None
+    model: str | None = None
+    timeout: float = Field(default=DEFAULT_LLM_TIMEOUT, gt=0)
+    max_tokens: int = Field(default=DEFAULT_MAX_TOKENS, gt=0)
+    temperature: float = Field(default=DEFAULT_TEMPERATURE, ge=0)
+    min_score: float = Field(default=DEFAULT_MIN_SCORE, ge=0)
+
+    @field_validator("base_url", mode="before")
+    @classmethod
+    def _default_base_url(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return value.strip().rstrip("/") or DEFAULT_LLM_BASE_URL
+        return value
+
+    @field_validator("api_key", "model", mode="before")
+    @classmethod
+    def _blank_to_none(cls, value: Any) -> Any:
         if isinstance(value, str):
             return value.strip() or None
         return value

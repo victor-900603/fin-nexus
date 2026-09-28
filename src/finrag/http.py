@@ -115,3 +115,15 @@ def get_bytes(
     """GET 網址並回傳位元組。"""
     response = _send(client, "GET", url, headers=_headers(referer))
     return response.content
+
+
+def post_json(
+    client: httpx.Client,
+    url: str,
+    payload: Any,
+    *,
+    headers: dict[str, str] | None = None,
+) -> Any:
+    """POST JSON 並回傳解析後的內容。"""
+    response = _send(client, "POST", url, headers=headers or {}, json=payload)
+    return response.json()
