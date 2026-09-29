@@ -13,6 +13,7 @@ from finrag.http import (
     get_text,
     post_text,
     request_with_retry,
+    stream_lines,
 )
 
 
@@ -128,3 +129,25 @@ def test_request_with_retry_retries_server_error() -> None:
     response = request_with_retry(request, attempts=3, base_delay=0.0, sleep=lambda _: None)
     assert response.status_code == 200
     assert calls == 3
+
+
+def test_stream_lines_yields_response_lines() -> None:
+    captured: dict[str, str] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["body"] = request.content.decode()
+        return httpx.Response(200, content=b"a\nb\n")
+
+    with _client(handler) as client:
+        lines = list(stream_lines(client, "https://example.com/", {"stream": True}))
+
+    assert lines == ["a", "b"]
+    assert captured["body"] == '{"stream":true}'
+
+
+def test_stream_lines_raises_on_error_status() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(500, content=b"boom")
+
+    with _client(handler) as client, pytest.raises(httpx.HTTPStatusError):
+        list(stream_lines(client, "https://example.com/", {"stream": True}))

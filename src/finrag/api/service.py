@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
+from typing import Any
 
 import httpx
 from qdrant_client import QdrantClient
@@ -24,6 +25,7 @@ from finrag.api.schema import (
     CitationOut,
     HealthResponse,
 )
+from finrag.api.sse import EVENT_DELTA, EVENT_DONE, EVENT_ERROR, sse_event
 from finrag.config import GenerationConfig
 from finrag.contracts import SearchHit, SearchRequest, SearchResponse, SearchResult
 from finrag.generation.client import LLMClient
@@ -35,7 +37,7 @@ from finrag.generation.generator import (
     build_messages,
     finalize_answer,
 )
-from finrag.generation.prompt import build_context
+from finrag.generation.prompt import ABSTAIN_TEXT, build_context
 from finrag.retrieval.compactor import compact_text
 from finrag.retrieval.dedupe import dedupe
 from finrag.retrieval.ontology import Ontology
@@ -208,6 +210,26 @@ class QueryService:
         )
         return response
 
+    def stream_chat(self, request: ChatRequest, plan: ChatPlan) -> Iterator[str]:
+        """以 SSE 逐段輸出答案。"""
+        if plan.reason is not None:
+            yield sse_event(EVENT_DELTA, {"text": ABSTAIN_TEXT})
+            yield sse_event(
+                EVENT_DONE, self._done_payload(request, plan, abstained_answer(plan.reason))
+            )
+            return
+        buffer: list[str] = []
+        try:
+            for delta in self._llm.stream(build_messages(request.query, plan.context)):
+                buffer.append(delta)
+                yield sse_event(EVENT_DELTA, {"text": delta})
+        except httpx.HTTPError as error:
+            logger.exception("串流生成失敗")
+            yield sse_event(EVENT_ERROR, {"code": LLM_PROVIDER_ERROR, "message": str(error)})
+            return
+        answer = finalize_answer("".join(buffer), plan.contexts)
+        yield sse_event(EVENT_DONE, self._done_payload(request, plan, answer))
+
     def _answer(self, question: str, plan: ChatPlan) -> Answer:
         if plan.reason is not None:
             return abstained_answer(plan.reason)
@@ -216,6 +238,11 @@ class QueryService:
         except httpx.HTTPError as error:
             raise ApiError(LLM_PROVIDER_ERROR, str(error), 502) from error
         return finalize_answer(text, plan.contexts)
+
+    def _done_payload(self, request: ChatRequest, plan: ChatPlan, answer: Answer) -> dict[str, Any]:
+        return self._build_response(
+            request, plan, answer.answer, answer.abstain_reason, answer.citations
+        ).model_dump()
 
     def _build_response(
         self,

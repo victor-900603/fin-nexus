@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import json
+from collections.abc import Iterator, Sequence
 from typing import Any
 
 import httpx
@@ -31,10 +32,20 @@ class _FakeLLM:
         self.calls += 1
         return self._reply
 
+    def stream(self, messages: Sequence[ChatMessage]) -> Iterator[str]:
+        self.calls += 1
+        midpoint = len(self._reply) // 2
+        yield self._reply[:midpoint]
+        yield self._reply[midpoint:]
+
 
 class _FailingLLM:
     def chat(self, messages: Sequence[ChatMessage]) -> str:
         raise httpx.ConnectError("llm down")
+
+    def stream(self, messages: Sequence[ChatMessage]) -> Iterator[str]:
+        raise httpx.ConnectError("llm down")
+        yield ""
 
 
 class _BrokenClient:
@@ -134,6 +145,16 @@ def _make_client(
     monkeypatch: pytest.MonkeyPatch, hits: list[SearchHit], **kwargs: Any
 ) -> TestClient:
     return TestClient(create_app(_make_service(monkeypatch, hits, **kwargs)))
+
+
+def _events(text: str) -> list[tuple[str, Any]]:
+    events: list[tuple[str, Any]] = []
+    for block in text.strip().split("\n\n"):
+        lines = block.splitlines()
+        event = lines[0].removeprefix("event: ")
+        data = json.loads(lines[1].removeprefix("data: "))
+        events.append((event, data))
+    return events
 
 
 def test_search_returns_results(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -469,3 +490,69 @@ def test_missing_service_returns_503() -> None:
 
     assert response.status_code == 503
     assert response.json()["error"]["code"] == "SERVICE_UNAVAILABLE"
+
+
+def test_chat_stream_emits_deltas_and_done(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = _make_client(monkeypatch, [_report_hit()])
+
+    response = client.post(
+        "/api/v1/chat",
+        json={"query": "台積電 2024 Q2 營收", "enable_rerank": False, "stream": True},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/event-stream")
+    events = _events(response.text)
+    deltas = [data["text"] for event, data in events if event == "delta"]
+    assert "".join(deltas) == "營業收入為 100[1]"
+    event, done = events[-1]
+    assert event == "done"
+    assert done["answer"] == "營業收入為 100[1]"
+    assert done["abstained"] is False
+    assert done["abstain_reason"] is None
+    assert done["citations"][0]["file_name"] == "2330_2024_Q2_consolidated.pdf"
+
+
+def test_chat_stream_abstains_without_hits(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = _make_client(monkeypatch, [])
+
+    response = client.post(
+        "/api/v1/chat", json={"query": "查詢", "enable_rerank": False, "stream": True}
+    )
+
+    events = _events(response.text)
+    assert events[0][0] == "delta"
+    assert events[0][1]["text"] == "文檔未揭露"
+    event, done = events[-1]
+    assert event == "done"
+    assert done["abstained"] is True
+    assert done["abstain_reason"] == "no_hits"
+    assert done["citations"] == []
+
+
+def test_chat_stream_returns_503_when_model_not_configured(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = _make_client(monkeypatch, [_report_hit()], model=None)
+
+    response = client.post(
+        "/api/v1/chat", json={"query": "查詢", "enable_rerank": False, "stream": True}
+    )
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "LLM_NOT_CONFIGURED"
+
+
+def test_chat_stream_emits_error_event_when_llm_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = _make_client(monkeypatch, [_report_hit()], llm=_FailingLLM())
+
+    response = client.post(
+        "/api/v1/chat", json={"query": "查詢", "enable_rerank": False, "stream": True}
+    )
+
+    assert response.status_code == 200
+    events = _events(response.text)
+    assert events[-1][0] == "error"
+    assert events[-1][1]["code"] == "LLM_PROVIDER_ERROR"

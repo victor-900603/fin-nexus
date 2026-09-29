@@ -123,5 +123,64 @@ def test_chat_completions_client_posts_and_parses() -> None:
     assert body["messages"] == [{"role": "user", "content": "問題"}]
 
 
+def test_chat_completions_client_streams_deltas() -> None:
+    captured: dict[str, object] = {}
+    body = (
+        'data: {"choices": [{"delta": {"content": "現金"}}]}\n\n'
+        'data: {"choices": [{"delta": {"content": "為 100"}}]}\n\n'
+        "data: [DONE]\n\n"
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["body"] = json.loads(request.content)
+        return httpx.Response(200, content=body.encode("utf-8"))
+
+    transport = httpx.MockTransport(handler)
+    with httpx.Client(transport=transport) as http_client:
+        client = ChatCompletionsClient(
+            GenerationConfig(
+                base_url="http://example.com/v1",
+                model="test-model",
+                _env_file=None,
+            ),
+            client=http_client,
+        )
+        deltas = list(client.stream([ChatMessage(role="user", content="問題")]))
+
+    assert deltas == ["現金", "為 100"]
+    payload = captured["body"]
+    assert isinstance(payload, dict)
+    assert payload["stream"] is True
+
+
+def test_chat_completions_client_stream_ignores_malformed_lines() -> None:
+    body = (
+        "event: message\n"
+        ": keep-alive\n\n"
+        "data: not-json\n\n"
+        'data: {"choices": []}\n\n'
+        'data: {"choices": [{"delta": {"content": 5}}]}\n\n'
+        'data: {"choices": [{"delta": {"content": "ok"}}]}\n\n'
+        "data: [DONE]\n\n"
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=body.encode("utf-8"))
+
+    transport = httpx.MockTransport(handler)
+    with httpx.Client(transport=transport) as http_client:
+        client = ChatCompletionsClient(
+            GenerationConfig(
+                base_url="http://example.com/v1",
+                model="test-model",
+                _env_file=None,
+            ),
+            client=http_client,
+        )
+        deltas = list(client.stream([ChatMessage(role="user", content="問題")]))
+
+    assert deltas == ["ok"]
+
+
 def test_default_client_is_cached() -> None:
     assert default_client() is default_client()

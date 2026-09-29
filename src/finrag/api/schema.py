@@ -15,6 +15,7 @@ class ChatRequest(SearchRequest):
     """問答請求。"""
 
     abstain_threshold: float = Field(default=0.0, ge=0)
+    stream: bool = False
 
 
 class CitationOut(BaseModel):

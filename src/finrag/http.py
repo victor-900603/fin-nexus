@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import random
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from typing import Any
 
 import httpx
@@ -127,3 +127,16 @@ def post_json(
     """POST JSON 並回傳解析後的內容。"""
     response = _send(client, "POST", url, headers=headers or {}, json=payload)
     return response.json()
+
+
+def stream_lines(
+    client: httpx.Client,
+    url: str,
+    payload: Any,
+    *,
+    headers: dict[str, str] | None = None,
+) -> Iterator[str]:
+    """POST JSON 並逐行回傳回應內容。"""
+    with client.stream("POST", url, headers=headers or {}, json=payload) as response:
+        response.raise_for_status()
+        yield from response.iter_lines()

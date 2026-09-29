@@ -9,7 +9,7 @@ from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from finrag import __version__
 from finrag.api.errors import (
@@ -99,11 +99,7 @@ def create_app(service: QueryService | None = None) -> FastAPI:
         logger.exception("未預期的錯誤")
         return _error_response(500, INTERNAL_ERROR, "內部錯誤")
 
-    @app.get(
-        "/health",
-        response_model=HealthResponse,
-        responses={503: {"model": HealthResponse}},
-    )
+    @app.get("/health", response_model=HealthResponse, responses={503: {"model": HealthResponse}})
     def health(
         response: Response, service: Annotated[QueryService, Depends(_service)]
     ) -> HealthResponse:
@@ -125,9 +121,14 @@ def create_app(service: QueryService | None = None) -> FastAPI:
     @app.post("/api/v1/chat", response_model=ChatResponse, responses=_ERROR_RESPONSES)
     def chat(
         payload: ChatRequest, service: Annotated[QueryService, Depends(_service)]
-    ) -> ChatResponse:
+    ) -> ChatResponse | StreamingResponse:
         if not payload.query.strip():
             raise ApiError(INVALID_QUERY, "查詢字串不得為空", 400)
+        if payload.stream:
+            plan = service.prepare_chat(payload)
+            return StreamingResponse(
+                service.stream_chat(payload, plan), media_type="text/event-stream"
+            )
         return service.chat(payload)
 
     return app

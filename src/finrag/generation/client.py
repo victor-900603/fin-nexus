@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import json
+from collections.abc import Iterator, Sequence
 from functools import lru_cache
 from typing import Any, Protocol
 
@@ -10,9 +11,11 @@ import httpx
 from pydantic import BaseModel
 
 from finrag.config import GenerationConfig
-from finrag.http import post_json
+from finrag.http import post_json, stream_lines
 
 _CHAT_PATH = "/chat/completions"
+_SSE_DATA_PREFIX = "data:"
+_SSE_DONE = "[DONE]"
 
 
 class ChatMessage(BaseModel):
@@ -26,6 +29,8 @@ class LLMClient(Protocol):
     """語言模型客戶端。"""
 
     def chat(self, messages: Sequence[ChatMessage]) -> str: ...
+
+    def stream(self, messages: Sequence[ChatMessage]) -> Iterator[str]: ...
 
 
 class ChatCompletionsClient:
@@ -59,9 +64,49 @@ class ChatCompletionsClient:
         with httpx.Client(timeout=self._config.timeout) as client:
             return _parse(post_json(client, url, payload, headers=headers))
 
+    def stream(self, messages: Sequence[ChatMessage]) -> Iterator[str]:
+        """以串流送出對話並逐段回傳文字。"""
+        url = f"{self._config.base_url}{_CHAT_PATH}"
+        payload = self._payload(messages)
+        payload["stream"] = True
+        headers = self._headers()
+        if self._client is not None:
+            yield from _iter_deltas(
+                stream_lines(self._client, url, payload, headers=headers)
+            )
+            return
+        with httpx.Client(timeout=self._config.timeout) as client:
+            yield from _iter_deltas(stream_lines(client, url, payload, headers=headers))
+
 
 def _parse(data: Any) -> str:
     return str(data["choices"][0]["message"]["content"])
+
+
+def _delta_content(data: str) -> str:
+    try:
+        parsed = json.loads(data)
+    except json.JSONDecodeError:
+        return ""
+    choices = parsed.get("choices") if isinstance(parsed, dict) else None
+    if not choices:
+        return ""
+    delta = choices[0].get("delta") or {}
+    content = delta.get("content")
+    return content if isinstance(content, str) else ""
+
+
+def _iter_deltas(lines: Iterator[str]) -> Iterator[str]:
+    for line in lines:
+        stripped = line.strip()
+        if not stripped.startswith(_SSE_DATA_PREFIX):
+            continue
+        data = stripped[len(_SSE_DATA_PREFIX) :].strip()
+        if data == _SSE_DONE:
+            return
+        content = _delta_content(data)
+        if content:
+            yield content
 
 
 @lru_cache(maxsize=1)
