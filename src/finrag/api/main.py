@@ -15,6 +15,7 @@ from finrag import __version__
 from finrag.api.errors import (
     INTERNAL_ERROR,
     INVALID_QUERY,
+    SERVICE_UNAVAILABLE,
     VALIDATION_ERROR,
     ApiError,
 )
@@ -53,7 +54,7 @@ def _error_response(status_code: int, code: str, message: str) -> JSONResponse:
 def _service(request: Request) -> QueryService:
     service: QueryService | None = request.app.state.service
     if service is None:
-        raise RuntimeError("服務尚未初始化")
+        raise ApiError(SERVICE_UNAVAILABLE, "服務尚未初始化", 503)
     return service
 
 
@@ -98,7 +99,11 @@ def create_app(service: QueryService | None = None) -> FastAPI:
         logger.exception("未預期的錯誤")
         return _error_response(500, INTERNAL_ERROR, "內部錯誤")
 
-    @app.get("/health", response_model=HealthResponse)
+    @app.get(
+        "/health",
+        response_model=HealthResponse,
+        responses={503: {"model": HealthResponse}},
+    )
     def health(
         response: Response, service: Annotated[QueryService, Depends(_service)]
     ) -> HealthResponse:

@@ -462,10 +462,10 @@ def test_unexpected_error_returns_500(monkeypatch: pytest.MonkeyPatch) -> None:
     assert response.json()["error"]["code"] == "INTERNAL_ERROR"
 
 
-def test_missing_service_returns_500() -> None:
+def test_missing_service_returns_503() -> None:
     client = TestClient(create_app(), raise_server_exceptions=False)
 
     response = client.get("/health")
 
-    assert response.status_code == 500
-    assert response.json()["error"]["code"] == "INTERNAL_ERROR"
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "SERVICE_UNAVAILABLE"
