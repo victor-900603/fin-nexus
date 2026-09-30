@@ -248,11 +248,13 @@ def test_index_reports_dispatch(
 
     assert code == 0
     (name, (args, kwargs)), = calls
-    targets, paths, _client = args
+    doc_ids, paths, _client = args
     assert name == "index_reports"
-    assert [target.doc_id for target in targets] == ["2330_2023_Q1_consolidated"]
+    assert doc_ids == ["2330_2023_Q1_consolidated"]
     assert paths.data_dir == tmp_path
-    assert kwargs == {"force": False, "batch_size": 8}
+    assert set(kwargs) == {"embedder", "force", "batch_size"}
+    assert kwargs["force"] is False
+    assert kwargs["batch_size"] == 8
 
 
 def test_index_laws_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -265,7 +267,9 @@ def test_index_laws_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
     assert code == 0
     (name, (_, kwargs)), = calls
     assert name == "index_regulations"
-    assert kwargs == {"force": False, "batch_size": 64}
+    assert set(kwargs) == {"embedder", "force", "batch_size"}
+    assert kwargs["force"] is False
+    assert kwargs["batch_size"] == 64
 
 
 def test_index_reports_target_count(

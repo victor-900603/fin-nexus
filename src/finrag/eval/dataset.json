@@ -1,0 +1,305 @@
+{
+  "version": "2",
+  "cases": [
+    {
+      "id": "single-2330-2023Q1-revenue",
+      "category": "single_table_value",
+      "query": "台積電 2023 年第一季的營業收入淨額是多少？",
+      "expect": {"doc_id": "2330_2023_Q1_consolidated", "facts": ["508,632,973"]}
+    },
+    {
+      "id": "single-2330-2023Q1-assets",
+      "category": "single_table_value",
+      "query": "2023 年第一季台積電的資產總計為多少？",
+      "expect": {"doc_id": "2330_2023_Q1_consolidated", "facts": ["5,045,844,348"]}
+    },
+    {
+      "id": "single-2330-2023Q4-revenue",
+      "category": "single_table_value",
+      "query": "台積電 2023 年整年度的營業收入淨額為何？",
+      "expect": {"doc_id": "2330_2023_Q4_consolidated", "facts": ["2,161,735,841"]}
+    },
+    {
+      "id": "single-2330-2024Q1-revenue",
+      "category": "single_table_value",
+      "query": "台積電 2024 年 Q1 的營收是多少？",
+      "expect": {"doc_id": "2330_2024_Q1_consolidated", "facts": ["592,644,201"]}
+    },
+    {
+      "id": "single-2330-2024Q1-gross",
+      "category": "single_table_value",
+      "query": "台積電 2024 年第一季的營業毛利為多少？",
+      "expect": {"doc_id": "2330_2024_Q1_consolidated", "facts": ["314,505,269"]}
+    },
+    {
+      "id": "single-2330-2024Q4-assets",
+      "category": "single_table_value",
+      "query": "台積電 2024 年底的資產總額是多少？",
+      "expect": {"doc_id": "2330_2024_Q4_consolidated", "facts": ["6,691,938,000"]}
+    },
+    {
+      "id": "single-2330-2025Q1-revenue",
+      "category": "single_table_value",
+      "query": "台積電 2025 年第一季的營收淨額為何？",
+      "expect": {"doc_id": "2330_2025_Q1_consolidated", "facts": ["839,253,664"]}
+    },
+    {
+      "id": "single-2330-2025Q3-revenue",
+      "category": "single_table_value",
+      "query": "台積電 2025 年第三季的營業收入淨額為何？",
+      "expect": {"doc_id": "2330_2025_Q3_consolidated", "facts": ["989,918,318"]}
+    },
+    {
+      "id": "single-2330-2025Q4-gross",
+      "category": "single_table_value",
+      "query": "台積電 2025 年全年的營業毛利是多少？",
+      "expect": {"doc_id": "2330_2025_Q4_consolidated", "facts": ["2,281,293,979"]}
+    },
+    {
+      "id": "single-2303-2023Q1-revenue",
+      "category": "single_table_value",
+      "query": "聯電 2023 年第一季的營業收入淨額是多少？",
+      "expect": {"doc_id": "2303_2023_Q1_consolidated", "facts": ["54,209,447"]}
+    },
+    {
+      "id": "single-2303-2023Q4-revenue",
+      "category": "single_table_value",
+      "query": "聯電 2023 年全年營收為何？",
+      "expect": {"doc_id": "2303_2023_Q4_consolidated", "facts": ["222,533,000"]}
+    },
+    {
+      "id": "single-2303-2024Q1-gross",
+      "category": "single_table_value",
+      "query": "聯電 2024 年第一季的營業毛利是多少？",
+      "expect": {"doc_id": "2303_2024_Q1_consolidated", "facts": ["16,899,430"]}
+    },
+    {
+      "id": "single-2303-2024Q4-revenue",
+      "category": "single_table_value",
+      "query": "聯電 2024 年整年度的營業收入是多少？",
+      "expect": {"doc_id": "2303_2024_Q4_consolidated", "facts": ["232,302,584"]}
+    },
+    {
+      "id": "single-2303-2025Q3-revenue",
+      "category": "single_table_value",
+      "query": "聯電 2025 年第三季的營業收入淨額？",
+      "expect": {"doc_id": "2303_2025_Q3_consolidated", "facts": ["59,127,040"]}
+    },
+    {
+      "id": "single-2303-2025Q4-gross",
+      "category": "single_table_value",
+      "query": "聯電 2025 年全年營業毛利是多少？",
+      "expect": {"doc_id": "2303_2025_Q4_consolidated", "facts": ["68,906,499"]}
+    },
+    {
+      "id": "single-2454-2023Q1-revenue",
+      "category": "single_table_value",
+      "query": "聯發科 2023 年第一季的營業收入是多少？",
+      "expect": {"doc_id": "2454_2023_Q1_consolidated", "facts": ["95,651,513"]}
+    },
+    {
+      "id": "single-2454-2023Q4-revenue",
+      "category": "single_table_value",
+      "query": "聯發科 2023 年全年的營業收入淨額？",
+      "expect": {"doc_id": "2454_2023_Q4_consolidated", "facts": ["433,446,330"]}
+    },
+    {
+      "id": "single-2454-2023Q4-assets",
+      "category": "single_table_value",
+      "query": "聯發科 2023 年底的資產總計為多少？",
+      "expect": {"doc_id": "2454_2023_Q4_consolidated", "facts": ["635,038,494"]}
+    },
+    {
+      "id": "single-2454-2024Q2-revenue",
+      "category": "single_table_value",
+      "query": "聯發科 2024 年第二季的營業收入淨額？",
+      "expect": {"doc_id": "2454_2024_Q2_consolidated", "facts": ["127,271,121"]}
+    },
+    {
+      "id": "single-2454-2024Q2-gross",
+      "category": "single_table_value",
+      "query": "聯發科 2024 年第二季的營業毛利為多少？",
+      "expect": {"doc_id": "2454_2024_Q2_consolidated", "facts": ["62,136,422"]}
+    },
+    {
+      "id": "multi-2330-2023Q1-cash",
+      "category": "multi_hop_note",
+      "query": "台積電 2023 年第一季的現金及約當現金明細為何？",
+      "expect": {"doc_id": "2330_2023_Q1_consolidated", "facts": ["1,376,643,700"]}
+    },
+    {
+      "id": "multi-2330-2023Q1-inventory",
+      "category": "multi_hop_note",
+      "query": "台積電 2023 年第一季的存貨合計金額是多少？",
+      "expect": {"doc_id": "2330_2023_Q1_consolidated", "facts": ["216,067,981"]}
+    },
+    {
+      "id": "multi-2330-2023Q1-bonds",
+      "category": "multi_hop_note",
+      "query": "台積電 2023 年第一季的應付公司債餘額為何？",
+      "expect": {"doc_id": "2330_2023_Q1_consolidated", "facts": ["386,244,000"]}
+    },
+    {
+      "id": "multi-2330-2023Q1-pledged",
+      "category": "multi_hop_note",
+      "query": "台積電 2023 年第一季被質押的資產金額為多少？",
+      "expect": {"doc_id": "2330_2023_Q1_consolidated", "facts": ["121,565"]}
+    },
+    {
+      "id": "multi-2330-2023Q1-subsidy",
+      "category": "multi_hop_note",
+      "query": "台積電 2023 年第一季認列的政府補助是多少？",
+      "expect": {"doc_id": "2330_2023_Q1_consolidated", "facts": ["1,768,032"]}
+    },
+    {
+      "id": "multi-2330-2023Q1-eps",
+      "category": "multi_hop_note",
+      "query": "台積電 2023 年第一季的基本每股盈餘為何？",
+      "expect": {"doc_id": "2330_2023_Q1_consolidated", "facts": ["7.98"]}
+    },
+    {
+      "id": "multi-2330-2023Q4-cash",
+      "category": "multi_hop_note",
+      "query": "台積電 2023 年底資產負債表上的現金及銀行存款金額是多少？",
+      "expect": {"doc_id": "2330_2023_Q4_consolidated", "facts": ["1,453,101,566"]}
+    },
+    {
+      "id": "multi-2303-2023Q1-inventory",
+      "category": "multi_hop_note",
+      "query": "聯電 2023 年第一季的存貨淨額是多少？",
+      "expect": {"doc_id": "2303_2023_Q1_consolidated", "facts": ["32,678,867"]}
+    },
+    {
+      "id": "multi-2303-2023Q1-cash",
+      "category": "multi_hop_note",
+      "query": "聯電 2023 年第一季的現金及約當現金餘額為何？",
+      "expect": {"doc_id": "2303_2023_Q1_consolidated", "facts": ["171,834,458"]}
+    },
+    {
+      "id": "multi-2303-2024Q1-cash",
+      "category": "multi_hop_note",
+      "query": "聯電 2024 年第一季的現金及約當現金餘額為何？",
+      "expect": {"doc_id": "2303_2024_Q1_consolidated", "facts": ["119,431,260"]}
+    },
+    {
+      "id": "multi-2303-2024Q1-inventory",
+      "category": "multi_hop_note",
+      "query": "聯電 2024 年第一季的存貨淨額為多少？",
+      "expect": {"doc_id": "2303_2024_Q1_consolidated", "facts": ["34,593,276"]}
+    },
+    {
+      "id": "multi-2454-2023Q1-eps-shares",
+      "category": "multi_hop_note",
+      "query": "聯發科 2023 年第一季基本每股盈餘的加權平均股數是多少？",
+      "expect": {"doc_id": "2454_2023_Q1_consolidated", "facts": ["1,585,830,719"]}
+    },
+    {
+      "id": "multi-2454-2023Q3-inventory",
+      "category": "multi_hop_note",
+      "query": "聯發科 2023 年第三季的存貨淨額為何？",
+      "expect": {"doc_id": "2454_2023_Q3_consolidated", "facts": ["53,390,869"]}
+    },
+    {
+      "id": "multi-2454-2024Q2-cash",
+      "category": "multi_hop_note",
+      "query": "聯發科 2024 年第二季的現金及約當現金合計是多少？",
+      "expect": {"doc_id": "2454_2024_Q2_consolidated", "facts": ["189,851,994"]}
+    },
+    {
+      "id": "multi-2454-2024Q2-inventory",
+      "category": "multi_hop_note",
+      "query": "聯發科 2024 年第二季的存貨金額為何？",
+      "expect": {"doc_id": "2454_2024_Q2_consolidated", "facts": ["53,578,351"]}
+    },
+    {
+      "id": "reg-G0400001-13",
+      "category": "regulation",
+      "query": "證券交易法所稱的公開說明書定義為何？",
+      "expect": {"doc_id": "law_G0400001", "article_no": "第 13 條"}
+    },
+    {
+      "id": "reg-G0400001-30",
+      "category": "regulation",
+      "query": "依證券交易法第 30 條，公司募集有價證券時除公司法規定事項外還應加具什麼文件？",
+      "expect": {"doc_id": "law_G0400001", "article_no": "第 30 條"}
+    },
+    {
+      "id": "reg-G0400001-31",
+      "category": "regulation",
+      "query": "證券交易法第 31 條規定募集有價證券時應先交付什麼文件？",
+      "expect": {"doc_id": "law_G0400001", "article_no": "第 31 條"}
+    },
+    {
+      "id": "reg-G0400001-157-1",
+      "category": "regulation",
+      "query": "證券交易法禁止內線交易的規定是哪一條？",
+      "expect": {"doc_id": "law_G0400001", "article_no": "第 157-1 條"}
+    },
+    {
+      "id": "reg-G0400001-171",
+      "category": "regulation",
+      "query": "違反證券交易法第 171 條的犯罪最重可處幾年有期徒刑？",
+      "expect": {"doc_id": "law_G0400001", "article_no": "第 171 條", "facts": ["三年以上十年以下"]}
+    },
+    {
+      "id": "reg-G0400001-172",
+      "category": "regulation",
+      "query": "證券交易所的董事違反證券交易法第 172 條會被處以何種刑責？",
+      "expect": {"doc_id": "law_G0400001", "article_no": "第 172 條"}
+    },
+    {
+      "id": "reg-G0400001-174",
+      "category": "regulation",
+      "query": "證券交易法第 174 條的法定刑為何？",
+      "expect": {"doc_id": "law_G0400001", "article_no": "第 174 條", "facts": ["一年以上七年以下"]}
+    },
+    {
+      "id": "reg-G0400001-178",
+      "category": "regulation",
+      "query": "證券交易法第 178 條規定的罰鍰金額範圍為何？",
+      "expect": {"doc_id": "law_G0400001", "article_no": "第 178 條", "facts": ["二十四萬元以上四百八十萬元以下"]}
+    },
+    {
+      "id": "reg-G0400069-18",
+      "category": "regulation",
+      "query": "公開發行公司取得或處分資產處理準則第 18 條，向關係人取得不動產且評估較低時應辦理哪些事項？",
+      "expect": {"doc_id": "law_G0400069", "article_no": "第 18 條"}
+    },
+    {
+      "id": "reg-G0400045-24",
+      "category": "regulation",
+      "query": "公開發行公司建立內部控制制度處理準則第 24 條要求公司每年自行評估什麼？",
+      "expect": {"doc_id": "law_G0400045", "article_no": "第 24 條"}
+    },
+    {
+      "id": "noanswer-crypto",
+      "category": "no_answer",
+      "query": "台積電 2023 年第一季持有多少加密貨幣？",
+      "expect": {"forbid": ["加密貨幣"]}
+    },
+    {
+      "id": "noanswer-space",
+      "category": "no_answer",
+      "query": "台積電 2023 年第一季太空探勘事業部的營業收入為何？",
+      "expect": {"forbid": ["太空探勘"]}
+    },
+    {
+      "id": "noanswer-law-999",
+      "category": "no_answer",
+      "query": "證券交易法第 999 條的規定內容為何？",
+      "expect": {"forbid": ["第 999 條"]}
+    },
+    {
+      "id": "noanswer-2303-2023Q2",
+      "category": "no_answer",
+      "query": "聯電 2023 年第二季的營業收入淨額是多少？",
+      "expect": {"forbid": ["54,209,447"]}
+    },
+    {
+      "id": "noanswer-2454-2025Q4",
+      "category": "no_answer",
+      "query": "聯發科 2025 年第四季的營業收入淨額是多少？",
+      "expect": {"forbid": ["127,271,121"]}
+    }
+  ]
+}
