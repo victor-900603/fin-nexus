@@ -25,6 +25,7 @@ finrag = "finrag.cli:main"
 
 [dependency-groups]
 dev = [
+    "import-linter>=2.0",
     "mypy>=1.13",
     "pytest>=8.3",
     "pytest-cov>=6.0",
@@ -79,6 +80,14 @@ warn_return_any = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 
+[[tool.mypy.overrides]]
+module = ["transformers.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["FlagEmbedding.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers --cov=finrag --cov-report=term-missing"
@@ -90,3 +99,51 @@ branch = true
 [tool.coverage.report]
 fail_under = 80
 show_missing = true
+
+[tool.importlinter]
+root_package = "finrag"
+
+[[tool.importlinter.contracts]]
+name = "架構分層"
+type = "layers"
+layers = [
+    "finrag.cli",
+    "finrag.api | finrag.eval",
+    "finrag.ingest | finrag.retrieval | finrag.generation",
+    "finrag.storage",
+    "finrag.contracts | finrag.http",
+    "finrag.logging",
+    "finrag.text",
+    "finrag.models",
+    "finrag.config",
+]
+
+[[tool.importlinter.contracts]]
+name = "generation 不依賴 retrieval"
+type = "forbidden"
+source_modules = ["finrag.generation"]
+forbidden_modules = ["finrag.retrieval"]
+
+[[tool.importlinter.contracts]]
+name = "retrieval 不依賴 ingest"
+type = "forbidden"
+source_modules = ["finrag.retrieval"]
+forbidden_modules = ["finrag.ingest"]
+
+[[tool.importlinter.contracts]]
+name = "storage 不依賴 ingest"
+type = "forbidden"
+source_modules = ["finrag.storage"]
+forbidden_modules = ["finrag.ingest"]
+
+[[tool.importlinter.contracts]]
+name = "eval 不依賴 api"
+type = "forbidden"
+source_modules = ["finrag.eval"]
+forbidden_modules = ["finrag.api"]
+
+[[tool.importlinter.contracts]]
+name = "api.schema 不依賴 retrieval"
+type = "forbidden"
+source_modules = ["finrag.api.schema"]
+forbidden_modules = ["finrag.retrieval"]
