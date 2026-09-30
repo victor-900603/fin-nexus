@@ -224,16 +224,16 @@ def test_oversized_row_split_keeps_header() -> None:
     assert all(len(child.text) <= 30 for child in children)
 
 
-def test_wide_row_kept_intact_even_over_budget() -> None:
+def test_wide_row_split_when_header_pushes_over_budget() -> None:
     table = "| h1 | h2 |\n| --- | --- |\n| aaaaa | bbbb |"
     blocks = [Block(type=BlockType.TABLE, text=table, page=1)]
     chunks = chunk_document(
         _document(blocks), counter=_counter, config=ChunkConfig(child_max=40, parent_max=1000)
     )
     children = [chunk for chunk in chunks if not chunk.metadata.is_parent]
-    assert len(children) == 1
-    assert children[0].text == table
-    assert len(children[0].text) > 40
+    assert len(children) > 1
+    assert all(len(child.text) <= 40 for child in children)
+    assert all("| h1 | h2 |" in child.text for child in children)
 
 
 def test_table_title_from_caption() -> None:
@@ -288,7 +288,7 @@ def test_multi_row_table_header_is_preserved() -> None:
     table = f"{header}\n{rows}"
     blocks = [Block(type=BlockType.TABLE, text=table, page=1)]
     chunks = chunk_document(
-        _document(blocks), counter=_counter, config=ChunkConfig(child_max=60, parent_max=1000)
+        _document(blocks), counter=_counter, config=ChunkConfig(child_max=80, parent_max=1000)
     )
     children = [chunk for chunk in chunks if not chunk.metadata.is_parent]
 

@@ -122,7 +122,7 @@ def _split_table_fragment(
             else:
                 pieces.extend(_hard_split(line, counter, max_tokens))
             continue
-        if counter(line) <= max_tokens:
+        if counter(f"{header}\n{line}") <= max_tokens:
             pieces.append(f"{header}\n{line}")
             continue
         for part in _split_by_cells(line, counter, budget):
