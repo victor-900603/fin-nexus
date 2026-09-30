@@ -322,3 +322,79 @@ def test_split_table_fragment_keeps_notes_and_drops_empty_pieces() -> None:
     assert "<u>註</u>" in pieces
     assert all(piece.strip() for piece in pieces)
     assert all(piece != "| h |\n| --- |" for piece in pieces)
+
+
+_OUTLINE = (
+    "| 項目 | 頁次 |\n"
+    "| --- | --- |\n"
+    "| 三、會計師核閱報告 | 3 |\n"
+    "| 四、合併資產負債表 | 4 |\n"
+    "| 五、合併綜合損益表 | 5 |\n"
+)
+
+
+def test_outline_fills_section_for_pages_without_headings() -> None:
+    blocks = [
+        Block(type=BlockType.TABLE, text=_OUTLINE, page=1),
+        Block(type=BlockType.TABLE, text="| 1100 | 100 |", page=3),
+        Block(type=BlockType.TABLE, text="| 4000 | 508 |", page=4),
+    ]
+    chunks = chunk_document(_document(blocks), counter=_counter)
+    sections = [chunk.metadata.section for chunk in chunks if chunk.metadata.is_parent]
+
+    assert [section for section in sections if section] == [
+        "四、合併資產負債表",
+        "五、合併綜合損益表",
+    ]
+
+
+def test_outline_boundary_resets_heading_stack() -> None:
+    blocks = [
+        Block(type=BlockType.TABLE, text=_OUTLINE, page=1),
+        Block(type=BlockType.HEADING, text="結論", level=2, page=2),
+        Block(type=BlockType.TEXT, text="核閱結論。", page=2),
+        Block(type=BlockType.TABLE, text="| 1100 | 100 |", page=3),
+    ]
+    chunks = chunk_document(_document(blocks), counter=_counter)
+    sections = [chunk.metadata.section for chunk in chunks if chunk.metadata.is_parent]
+
+    assert [section for section in sections if section] == ["結論", "四、合併資產負債表"]
+
+
+def test_outline_fills_gap_pages_from_previous_entry() -> None:
+    outline = (
+        "| 項目 | 頁次 |\n"
+        "| --- | --- |\n"
+        "| 六、合併權益變動表 | 8 |\n"
+        "| 七、合併現金流量表 | 10 |\n"
+    )
+    blocks = [
+        Block(type=BlockType.TABLE, text=outline, page=1),
+        Block(type=BlockType.TABLE, text="| 附表一 | 100 |", page=8),
+        Block(type=BlockType.TABLE, text="| 附表二 | 200 |", page=9),
+    ]
+    chunks = chunk_document(_document(blocks), counter=_counter)
+    sections = [chunk.metadata.section for chunk in chunks if chunk.metadata.is_parent]
+
+    assert [section for section in sections if section] == [
+        "六、合併權益變動表",
+        "七、合併現金流量表",
+    ]
+
+
+def test_outline_fills_pages_after_last_entry() -> None:
+    outline = (
+        "| 項目 | 頁次 |\n"
+        "| --- | --- |\n"
+        "| 二、目錄 | 1 |\n"
+        "| 七、合併現金流量表 | 8 |\n"
+    )
+    blocks = [
+        Block(type=BlockType.TABLE, text=outline, page=1),
+        Block(type=BlockType.TABLE, text="| 附表一 | 100 |", page=8),
+        Block(type=BlockType.TABLE, text="| 附表二 | 200 |", page=10),
+    ]
+    chunks = chunk_document(_document(blocks), counter=_counter)
+    sections = [chunk.metadata.section for chunk in chunks if chunk.metadata.is_parent]
+
+    assert sections == ["二、目錄", "七、合併現金流量表"]

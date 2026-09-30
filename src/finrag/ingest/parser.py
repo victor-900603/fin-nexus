@@ -12,6 +12,7 @@ from typing import Any
 from finrag.config import DEFAULT_TIER, ParseConfig
 from finrag.ingest.html_table import grid_to_markdown, table_rows
 from finrag.ingest.normalize import normalize_text
+from finrag.ingest.outline import is_heading
 from finrag.models import Block, BlockType, FinancialReportMeta, ParsedDocument
 
 SKIP_BLOCK_TYPES = {"image", "page_number", "header", "footer", "aside_text"}
@@ -159,7 +160,7 @@ def _text_block(block_type: Any, raw: dict[str, Any], page: int | None) -> Block
     text = _clean(_extract_text(raw.get("content")))
     if not text:
         return None
-    if block_type == "paragraph_title":
+    if block_type == "paragraph_title" and is_heading(text):
         level = raw.get("level")
         return Block(
             type=BlockType.HEADING,

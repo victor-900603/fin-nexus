@@ -6,6 +6,11 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from finrag.ingest.outline import (
+    OutlineEntry,
+    extract_outline,
+    page_sections,
+)
 from finrag.models import (
     Block,
     BlockType,
@@ -184,18 +189,29 @@ def _pack(
     return pack_by_tokens(units, lambda unit: unit.text, counter, max_tokens, prefix_tokens)
 
 
-def _sections(blocks: Sequence[Block]) -> list[tuple[list[str], list[Block]]]:
-    """依標題切分章節。"""
+def _sections(
+    blocks: Sequence[Block], outline: Sequence[OutlineEntry] = ()
+) -> list[tuple[list[str], list[Block]]]:
+    """依標題切分章節，並以目錄頁次補上沒有標題的頁面。"""
     sections: list[tuple[list[str], list[Block]]] = []
+    pages = [block.page for block in blocks if block.page is not None]
+    mapping = page_sections(outline, max(pages) if pages else None)
     stack: list[tuple[int, str]] = []
     current: list[Block] = []
+    outline_name: str | None = None
 
     def flush() -> None:
         if current:
-            sections.append(([text for _, text in stack], list(current)))
+            path = [text for _, text in stack] or ([outline_name] if outline_name else [])
+            sections.append((path, list(current)))
             current.clear()
 
     for block in blocks:
+        page_section = mapping.get(block.page) if block.page is not None else None
+        if page_section != outline_name:
+            flush()
+            stack.clear()
+            outline_name = page_section
         if block.type is BlockType.HEADING:
             flush()
             level = block.level if block.level is not None else len(stack) + 1
@@ -261,7 +277,8 @@ def chunk_document(
     doc_id = meta.doc_id
     chunks: list[Chunk] = []
     parent_index = 0
-    for path, blocks in _sections(document.blocks):
+    outline = extract_outline(document.blocks)
+    for path, blocks in _sections(document.blocks, outline):
         section = " > ".join(path)
         prefix = f"{section}\n" if section else ""
         prefix_tokens = counter(prefix) if section else 0

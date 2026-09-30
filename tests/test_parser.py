@@ -49,6 +49,65 @@ def test_middle_json_to_blocks() -> None:
     assert all("page_number" not in block.text for block in blocks)
 
 
+def test_unnumbered_title_becomes_text() -> None:
+    data = {
+        "pages": [
+            {
+                "page_idx": 0,
+                "blocks": [
+                    {
+                        "type": "paragraph_title",
+                        "bbox": [0.1, 0.4, 0.9, 0.44],
+                        "content": "期末持有有價證券情形",
+                    },
+                    {
+                        "type": "doc_title",
+                        "bbox": [0.1, 0.5, 0.9, 0.54],
+                        "content": "取得不動產之金額達新台幣三億元或實收資本額百分之二十以上",
+                    },
+                ],
+            }
+        ]
+    }
+    blocks = middle_json_to_blocks(data)
+
+    assert [block.type for block in blocks] == [BlockType.TEXT, BlockType.TEXT]
+
+
+def test_titles_are_classified_by_numbering_prefix() -> None:
+    data = {
+        "pages": [
+            {
+                "page_idx": 0,
+                "blocks": [
+                    {
+                        "type": "paragraph_title",
+                        "bbox": [0.1, 0.05, 0.9, 0.09],
+                        "content": "聯華電子股份有限公司及子公司合併財務報告附註(續)",
+                    },
+                    {
+                        "type": "doc_title",
+                        "bbox": [0.1, 0.11, 0.9, 0.14],
+                        "content": "台灣積體電路製造股份有限公司及子公司",
+                    },
+                    {
+                        "type": "paragraph_title",
+                        "bbox": [0.1, 0.3, 0.9, 0.34],
+                        "content": "十三、採用權益法之投資",
+                    },
+                ],
+            }
+        ]
+    }
+    blocks = middle_json_to_blocks(data)
+
+    assert [block.type for block in blocks] == [
+        BlockType.TEXT,
+        BlockType.TEXT,
+        BlockType.HEADING,
+    ]
+
+
 def test_table_caption_is_rendered_first() -> None:
     data = {
         "pages": [
