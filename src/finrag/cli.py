@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 from collections.abc import Sequence
 
+import uvicorn
+
 from finrag.config import StoragePaths
 from finrag.http import build_client
 from finrag.ingest.pipeline import (
@@ -21,6 +23,7 @@ from finrag.ingest.targets import (
     DEFAULT_YEARS,
     build_targets,
 )
+from finrag.logging import configure_logging
 from finrag.models.domain import LAW_SPECS, LawSpec, ReportTarget
 from finrag.storage.indexer import index_regulations, index_reports
 from finrag.storage.qdrant_client import build_client as build_qdrant_client
@@ -49,6 +52,11 @@ def build_parser() -> argparse.ArgumentParser:
             sub.add_argument("--delay", type=float, default=20.0)
         if name == "index":
             sub.add_argument("--batch-size", type=int, default=64)
+
+    serve = subparsers.add_parser("serve", help="啟動 API 服務")
+    serve.add_argument("--host", default="127.0.0.1")
+    serve.add_argument("--port", type=int, default=8000)
+    serve.add_argument("--reload", action="store_true")
 
     return parser
 
@@ -111,10 +119,24 @@ def _dispatch_regulations(
             qdrant.close()
 
 
+def _run_serve(args: argparse.Namespace) -> int:
+    configure_logging()
+    uvicorn.run(
+        "finrag.api.main:app",
+        host=args.host,
+        port=args.port,
+        reload=args.reload,
+    )
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """執行指令列入口。"""
     parser = build_parser()
     args = parser.parse_args(argv)
+    if args.command == "serve":
+        return _run_serve(args)
+
     paths = _paths(args)
     sources = _sources(args.source)
 

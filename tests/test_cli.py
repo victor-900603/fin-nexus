@@ -25,7 +25,7 @@ def _null_client(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_parser_has_subcommands() -> None:
     parser = cli.build_parser()
 
-    for command in ("fetch", "parse", "chunk", "all"):
+    for command in ("fetch", "parse", "chunk", "index", "all", "serve"):
         assert parser.parse_args([command]).command == command
 
 
@@ -217,3 +217,101 @@ def test_source_laws_skips_ticker_validation(monkeypatch: pytest.MonkeyPatch) ->
     code = cli.main(["chunk", "--source", "laws", "--ticker", "233"])
 
     assert code == 0
+
+
+def test_index_subcommand_default_batch_size() -> None:
+    assert cli.build_parser().parse_args(["index"]).batch_size == 64
+
+
+def test_index_reports_dispatch(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    calls: list[tuple[str, Any]] = []
+    _fake(monkeypatch, "index_reports", calls)
+    _null_client(monkeypatch)
+
+    code = cli.main(
+        [
+            "index",
+            "--ticker",
+            "2330",
+            "--years",
+            "2023",
+            "--quarters",
+            "Q1",
+            "--batch-size",
+            "8",
+            "--data-dir",
+            str(tmp_path),
+        ]
+    )
+
+    assert code == 0
+    (name, (args, kwargs)), = calls
+    targets, paths, _client = args
+    assert name == "index_reports"
+    assert [target.doc_id for target in targets] == ["2330_2023_Q1_consolidated"]
+    assert paths.data_dir == tmp_path
+    assert kwargs == {"force": False, "batch_size": 8}
+
+
+def test_index_laws_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[tuple[str, Any]] = []
+    _fake(monkeypatch, "index_regulations", calls)
+    _null_client(monkeypatch)
+
+    code = cli.main(["index", "--source", "laws"])
+
+    assert code == 0
+    (name, (_, kwargs)), = calls
+    assert name == "index_regulations"
+    assert kwargs == {"force": False, "batch_size": 64}
+
+
+def test_index_reports_target_count(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _fake(monkeypatch, "index_reports", [])
+    _null_client(monkeypatch)
+
+    cli.main(["index", "--ticker", "2330", "--years", "2023", "--quarters", "Q1", "Q2"])
+
+    assert capsys.readouterr().out.strip() == "index: 2 target(s)"
+
+
+def test_serve_subcommand_defaults() -> None:
+    args = cli.build_parser().parse_args(["serve"])
+
+    assert args.host == "127.0.0.1"
+    assert args.port == 8000
+    assert args.reload is False
+    assert not hasattr(args, "source")
+
+
+def test_serve_subcommand_custom_arguments() -> None:
+    args = cli.build_parser().parse_args(
+        ["serve", "--host", "0.0.0.0", "--port", "9000", "--reload"]
+    )
+
+    assert args.host == "0.0.0.0"
+    assert args.port == 9000
+    assert args.reload is True
+
+
+def test_main_serve_runs_uvicorn(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[tuple[str, Any]] = []
+    _fake(monkeypatch, "configure_logging", calls)
+    run_calls: list[tuple[tuple[Any, ...], dict[str, Any]]] = []
+
+    def fake_run(*args: Any, **kwargs: Any) -> None:
+        run_calls.append((args, kwargs))
+
+    monkeypatch.setattr(cli.uvicorn, "run", fake_run)
+
+    code = cli.main(["serve", "--host", "0.0.0.0", "--port", "9000", "--reload"])
+
+    assert code == 0
+    assert [name for name, _ in calls] == ["configure_logging"]
+    assert run_calls == [
+        (("finrag.api.main:app",), {"host": "0.0.0.0", "port": 9000, "reload": True})
+    ]
