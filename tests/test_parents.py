@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from finrag.contracts import SearchHit
-from finrag.retrieval.parents import expand_parents
-from finrag.storage.schema import point_id
+from fin_nexus.contracts import SearchHit
+from fin_nexus.retrieval.parents import expand_parents
+from fin_nexus.storage.schema import point_id
 
 COLLECTION = "fin_reports"
 

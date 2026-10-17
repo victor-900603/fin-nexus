@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from finrag.ingest.normalize import normalize_text
+from fin_nexus.ingest.normalize import normalize_text
 
 
 def test_removes_space_between_cjk() -> None:

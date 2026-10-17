@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from finrag.retrieval.compactor import compact_text
+from fin_nexus.retrieval.compactor import compact_text
 
 
 def _counter(text: str) -> int:

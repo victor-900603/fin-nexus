@@ -7,16 +7,16 @@ from pathlib import Path
 
 import pytest
 
-from finrag.config import (
+from fin_nexus.config import (
     FINANCIAL_REPORTS,
     REGULATIONS,
     REGULATIONS_CATALOG,
     REPORTS_CATALOG,
     StoragePaths,
 )
-from finrag.ingest import pipeline
-from finrag.ingest.targets import build_targets
-from finrag.models import (
+from fin_nexus.ingest import pipeline
+from fin_nexus.ingest.targets import build_targets
+from fin_nexus.models import (
     Block,
     BlockType,
     ParsedDocument,
@@ -26,13 +26,13 @@ from finrag.models import (
     RegulationMeta,
     ReportCatalog,
 )
-from finrag.models.domain import (
+from fin_nexus.models.domain import (
     ACQUISITION_DISPOSAL_LAW,
     SECURITIES_LAW,
     LawSpec,
     ReportTarget,
 )
-from finrag.storage.repository import read_catalog, write_catalog
+from fin_nexus.storage.repository import read_catalog, write_catalog
 
 _TARGETS = build_targets(["2330"], [2023], ["Q1", "Q2"])
 _SPECS = (SECURITIES_LAW, ACQUISITION_DISPOSAL_LAW)

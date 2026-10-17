@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from finrag.retrieval.ontology import (
+from fin_nexus.retrieval.ontology import (
     FINANCIAL_TERMS,
     IFRS_SYNONYMS,
     TICKER_MAP,
@@ -59,7 +59,7 @@ def test_load_missing_file_raises(tmp_path: Path) -> None:
 def test_default_ontology_prefers_override(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("FINRAG_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("FIN_NEXUS_DATA_DIR", str(tmp_path))
     _write(tmp_path / "ontology", tickers={"9999": ["測試公司"]})
     default_ontology.cache_clear()
 

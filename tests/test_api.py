@@ -12,15 +12,15 @@ from fastapi.testclient import TestClient
 from qdrant_client import QdrantClient
 from qdrant_client.http.exceptions import ResponseHandlingException
 
-from finrag import __version__
-from finrag.api.main import create_app
-from finrag.api.service import QueryService
-from finrag.config import GenerationConfig
-from finrag.contracts import SearchHit
-from finrag.generation.client import ChatMessage
-from finrag.retrieval.ontology import Ontology
-from finrag.retrieval.reranker import BgeReranker
-from finrag.storage.embedder import BgeM3Embedder
+from fin_nexus import __version__
+from fin_nexus.api.main import create_app
+from fin_nexus.api.service import QueryService
+from fin_nexus.config import GenerationConfig
+from fin_nexus.contracts import SearchHit
+from fin_nexus.generation.client import ChatMessage
+from fin_nexus.retrieval.ontology import Ontology
+from fin_nexus.retrieval.reranker import BgeReranker
+from fin_nexus.storage.embedder import BgeM3Embedder
 
 
 class _FakeLLM:
@@ -123,11 +123,11 @@ def _make_service(
     ontology: Any | None = None,
 ) -> QueryService:
     monkeypatch.setattr(
-        "finrag.retrieval.pipeline.search",
+        "fin_nexus.retrieval.pipeline.search",
         lambda plan, client, *, embedder=None, limit=None: list(hits),
     )
     monkeypatch.setattr(
-        "finrag.retrieval.pipeline.rerank",
+        "fin_nexus.retrieval.pipeline.rerank",
         lambda hits, query, *, reranker=None, top_k=5: list(hits)[:top_k],
     )
     return QueryService(
@@ -283,7 +283,7 @@ def test_search_returns_503_when_vector_store_fails(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     client = _make_client(monkeypatch, [])
-    monkeypatch.setattr("finrag.retrieval.pipeline.search", _raise_qdrant_error)
+    monkeypatch.setattr("fin_nexus.retrieval.pipeline.search", _raise_qdrant_error)
 
     response = client.post(
         "/api/v1/search", json={"query": "查詢", "enable_rerank": False}
@@ -462,7 +462,7 @@ def test_health_does_not_load_models(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_lifespan_creates_and_closes_client(monkeypatch: pytest.MonkeyPatch) -> None:
     stub = _ClosableClient()
-    monkeypatch.setattr("finrag.api.main.build_client", lambda: stub)
+    monkeypatch.setattr("fin_nexus.api.main.build_client", lambda: stub)
     app = create_app()
 
     with TestClient(app) as client:
@@ -474,7 +474,7 @@ def test_lifespan_creates_and_closes_client(monkeypatch: pytest.MonkeyPatch) -> 
 
 def test_unexpected_error_returns_500(monkeypatch: pytest.MonkeyPatch) -> None:
     service = _make_service(monkeypatch, [])
-    monkeypatch.setattr("finrag.retrieval.pipeline.search", _raise_runtime_error)
+    monkeypatch.setattr("fin_nexus.retrieval.pipeline.search", _raise_runtime_error)
     client = TestClient(create_app(service), raise_server_exceptions=False)
 
     response = client.post("/api/v1/search", json={"query": "查詢"})

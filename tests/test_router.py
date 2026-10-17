@@ -6,9 +6,9 @@ from typing import Any
 
 from qdrant_client import models
 
-from finrag.retrieval.expander import QueryAnalysis
-from finrag.retrieval.router import route
-from finrag.storage.qdrant_client import REGULATIONS_COLLECTION, REPORTS_COLLECTION
+from fin_nexus.retrieval.expander import QueryAnalysis
+from fin_nexus.retrieval.router import route
+from fin_nexus.storage.qdrant_client import REGULATIONS_COLLECTION, REPORTS_COLLECTION
 
 
 def _analysis(**overrides: Any) -> QueryAnalysis:

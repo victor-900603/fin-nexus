@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from finrag.config import (
+from fin_nexus.config import (
     FINANCIAL_REPORTS,
     REGULATIONS,
     REPORTS_CATALOG,
@@ -16,23 +16,23 @@ from finrag.config import (
     QdrantConfig,
     StoragePaths,
 )
-from finrag.logging import configure_logging
+from fin_nexus.logging import configure_logging
 
-_FINRAG_ENV = (
-    "FINRAG_MINERU_MODE",
-    "FINRAG_MINERU_TIER",
-    "FINRAG_MINERU_API_KEY",
-    "FINRAG_MINERU_REMOTE_URL",
-    "FINRAG_DATA_DIR",
-    "FINRAG_QDRANT_URL",
-    "FINRAG_QDRANT_API_KEY",
-    "FINRAG_QDRANT_TIMEOUT",
-    "FINRAG_LOG_LEVEL",
+_FIN_NEXUS_ENV = (
+    "FIN_NEXUS_MINERU_MODE",
+    "FIN_NEXUS_MINERU_TIER",
+    "FIN_NEXUS_MINERU_API_KEY",
+    "FIN_NEXUS_MINERU_REMOTE_URL",
+    "FIN_NEXUS_DATA_DIR",
+    "FIN_NEXUS_QDRANT_URL",
+    "FIN_NEXUS_QDRANT_API_KEY",
+    "FIN_NEXUS_QDRANT_TIMEOUT",
+    "FIN_NEXUS_LOG_LEVEL",
 )
 
 
 def _clear_environment(monkeypatch: pytest.MonkeyPatch) -> None:
-    for key in _FINRAG_ENV:
+    for key in _FIN_NEXUS_ENV:
         monkeypatch.delenv(key, raising=False)
 
 
@@ -48,10 +48,10 @@ def test_defaults_use_remote_mode(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_reads_environment(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("FINRAG_MINERU_MODE", "local")
-    monkeypatch.setenv("FINRAG_MINERU_TIER", "standard")
-    monkeypatch.setenv("FINRAG_MINERU_API_KEY", " secret-token ")
-    monkeypatch.setenv("FINRAG_MINERU_REMOTE_URL", "https://example.com/api")
+    monkeypatch.setenv("FIN_NEXUS_MINERU_MODE", "local")
+    monkeypatch.setenv("FIN_NEXUS_MINERU_TIER", "standard")
+    monkeypatch.setenv("FIN_NEXUS_MINERU_API_KEY", " secret-token ")
+    monkeypatch.setenv("FIN_NEXUS_MINERU_REMOTE_URL", "https://example.com/api")
 
     config = ParseConfig(_env_file=None)
 
@@ -62,9 +62,9 @@ def test_reads_environment(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_blank_environment_uses_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("FINRAG_MINERU_MODE", "  ")
-    monkeypatch.setenv("FINRAG_MINERU_TIER", "  ")
-    monkeypatch.setenv("FINRAG_MINERU_API_KEY", "")
+    monkeypatch.setenv("FIN_NEXUS_MINERU_MODE", "  ")
+    monkeypatch.setenv("FIN_NEXUS_MINERU_TIER", "  ")
+    monkeypatch.setenv("FIN_NEXUS_MINERU_API_KEY", "")
 
     config = ParseConfig(_env_file=None)
 
@@ -74,7 +74,7 @@ def test_blank_environment_uses_defaults(monkeypatch: pytest.MonkeyPatch) -> Non
 
 
 def test_rejects_unknown_mode(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("FINRAG_MINERU_MODE", "cloud")
+    monkeypatch.setenv("FIN_NEXUS_MINERU_MODE", "cloud")
 
     with pytest.raises(ValueError):
         ParseConfig(_env_file=None)
@@ -84,9 +84,9 @@ def test_reads_dotenv_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> N
     _clear_environment(monkeypatch)
     (tmp_path / ".env").write_text(
         "# 註解\n"
-        "FINRAG_MINERU_MODE=local\n"
-        "FINRAG_MINERU_TIER='standard'\n"
-        'FINRAG_MINERU_API_KEY="secret-token"\n',
+        "FIN_NEXUS_MINERU_MODE=local\n"
+        "FIN_NEXUS_MINERU_TIER='standard'\n"
+        'FIN_NEXUS_MINERU_API_KEY="secret-token"\n',
         encoding="utf-8",
     )
     monkeypatch.chdir(tmp_path)
@@ -99,9 +99,9 @@ def test_reads_dotenv_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> N
 
 
 def test_environment_overrides_dotenv(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    (tmp_path / ".env").write_text("FINRAG_MINERU_TIER=standard\n", encoding="utf-8")
+    (tmp_path / ".env").write_text("FIN_NEXUS_MINERU_TIER=standard\n", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("FINRAG_MINERU_TIER", "advanced")
+    monkeypatch.setenv("FIN_NEXUS_MINERU_TIER", "advanced")
 
     assert ParseConfig().tier == "advanced"
 
@@ -142,13 +142,13 @@ def test_storage_composes_structured_path(monkeypatch: pytest.MonkeyPatch) -> No
 
 
 def test_storage_reads_data_dir_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("FINRAG_DATA_DIR", "  custom  ")
+    monkeypatch.setenv("FIN_NEXUS_DATA_DIR", "  custom  ")
 
     assert StoragePaths(_env_file=None).data_dir == Path("custom")
 
 
 def test_storage_blank_data_dir_uses_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("FINRAG_DATA_DIR", "  ")
+    monkeypatch.setenv("FIN_NEXUS_DATA_DIR", "  ")
 
     assert StoragePaths(_env_file=None).data_dir == Path("data")
 
@@ -164,9 +164,9 @@ def test_qdrant_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_qdrant_reads_environment(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("FINRAG_QDRANT_URL", "http://qdrant:6333")
-    monkeypatch.setenv("FINRAG_QDRANT_API_KEY", " secret ")
-    monkeypatch.setenv("FINRAG_QDRANT_TIMEOUT", "30")
+    monkeypatch.setenv("FIN_NEXUS_QDRANT_URL", "http://qdrant:6333")
+    monkeypatch.setenv("FIN_NEXUS_QDRANT_API_KEY", " secret ")
+    monkeypatch.setenv("FIN_NEXUS_QDRANT_TIMEOUT", "30")
 
     config = QdrantConfig(_env_file=None)
 
@@ -176,8 +176,8 @@ def test_qdrant_reads_environment(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_qdrant_blank_values_use_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("FINRAG_QDRANT_URL", "  ")
-    monkeypatch.setenv("FINRAG_QDRANT_API_KEY", "")
+    monkeypatch.setenv("FIN_NEXUS_QDRANT_URL", "  ")
+    monkeypatch.setenv("FIN_NEXUS_QDRANT_API_KEY", "")
 
     config = QdrantConfig(_env_file=None)
 
@@ -192,13 +192,13 @@ def test_log_config_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_log_config_reads_environment(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("FINRAG_LOG_LEVEL", " debug ")
+    monkeypatch.setenv("FIN_NEXUS_LOG_LEVEL", " debug ")
 
     assert LogConfig(_env_file=None).log_level == "DEBUG"
 
 
 def test_log_config_blank_uses_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("FINRAG_LOG_LEVEL", "  ")
+    monkeypatch.setenv("FIN_NEXUS_LOG_LEVEL", "  ")
 
     assert LogConfig(_env_file=None).log_level == "INFO"
 

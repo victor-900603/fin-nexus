@@ -8,14 +8,14 @@ from pathlib import Path
 
 from qdrant_client import QdrantClient, models
 
-from finrag.config import (
+from fin_nexus.config import (
     FINANCIAL_REPORTS,
     REGULATIONS,
     REGULATIONS_CATALOG,
     REPORTS_CATALOG,
     StoragePaths,
 )
-from finrag.models import (
+from fin_nexus.models import (
     Chunk,
     ChunkMetadata,
     RegulationCatalog,
@@ -27,13 +27,13 @@ from finrag.models import (
     ReportPeriod,
     StageStatus,
 )
-from finrag.storage import indexer
-from finrag.storage.qdrant_client import (
+from fin_nexus.storage import indexer
+from fin_nexus.storage.qdrant_client import (
     DENSE_SIZE,
     REGULATIONS_COLLECTION,
     REPORTS_COLLECTION,
 )
-from finrag.storage.repository import read_jsonl, write_catalog
+from fin_nexus.storage.repository import read_jsonl, write_catalog
 
 _DOC_ID = "2330_2023_Q1_consolidated"
 _LAW_DOC_ID = "law_G0400001"

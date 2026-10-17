@@ -6,16 +6,16 @@ import json
 
 import httpx
 
-from finrag.config import GenerationConfig
-from finrag.contracts import SearchHit
-from finrag.generation.client import ChatCompletionsClient, ChatMessage, default_client
-from finrag.generation.generator import (
+from fin_nexus.config import GenerationConfig
+from fin_nexus.contracts import SearchHit
+from fin_nexus.generation.client import ChatCompletionsClient, ChatMessage, default_client
+from fin_nexus.generation.generator import (
     abstain_reason,
     build_citations,
     build_messages,
     finalize_answer,
 )
-from finrag.generation.prompt import ABSTAIN_TEXT, build_context, build_user_prompt
+from fin_nexus.generation.prompt import ABSTAIN_TEXT, build_context, build_user_prompt
 
 
 def _hit(score: float = 0.9) -> SearchHit:

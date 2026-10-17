@@ -6,8 +6,8 @@ from typing import Any
 
 from qdrant_client import QdrantClient, models
 
-from finrag.config import QdrantConfig
-from finrag.storage.qdrant_client import (
+from fin_nexus.config import QdrantConfig
+from fin_nexus.storage.qdrant_client import (
     DENSE_SIZE,
     DENSE_VECTOR,
     REGULATIONS_COLLECTION,

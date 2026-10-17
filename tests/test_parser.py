@@ -8,9 +8,9 @@ from pathlib import Path
 
 import pytest
 
-from finrag.config import ParseConfig
-from finrag.ingest.parser import _default_runner, middle_json_to_blocks, parse_pdf, run_mineru
-from finrag.models import BlockType, FinancialReportMeta, ReportPeriod
+from fin_nexus.config import ParseConfig
+from fin_nexus.ingest.parser import _default_runner, middle_json_to_blocks, parse_pdf, run_mineru
+from fin_nexus.models import BlockType, FinancialReportMeta, ReportPeriod
 
 FIXTURES = Path(__file__).parent / "fixtures"
 _LOCAL = ParseConfig(mode="local", _env_file=None)
@@ -455,7 +455,7 @@ def test_run_mineru_remote_url() -> None:
 def test_parse_pdf_remote_requires_api_key(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.delenv("FINRAG_MINERU_API_KEY", raising=False)
+    monkeypatch.delenv("FIN_NEXUS_MINERU_API_KEY", raising=False)
     with pytest.raises(ValueError):
         parse_pdf(
             Path("a.pdf"),

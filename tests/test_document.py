@@ -6,14 +6,14 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from finrag.models import (
+from fin_nexus.models import (
     FinancialReportMeta,
     RegulationMeta,
     ReportPeriod,
     ReportScope,
     SourceType,
 )
-from finrag.models.document import document_id, period_for_quarter
+from fin_nexus.models.document import document_id, period_for_quarter
 
 
 def _meta(**overrides: Any) -> FinancialReportMeta:

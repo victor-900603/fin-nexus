@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from finrag.contracts import SearchHit
-from finrag.retrieval.reranker import BgeReranker, rerank
+from fin_nexus.contracts import SearchHit
+from fin_nexus.retrieval.reranker import BgeReranker, rerank
 
 
 class _FakeModel:

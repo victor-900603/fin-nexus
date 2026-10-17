@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from finrag import cli
+from fin_nexus import cli
 
 
 def _fake(monkeypatch: pytest.MonkeyPatch, name: str, calls: list[tuple[str, Any]]) -> None:
@@ -317,5 +317,5 @@ def test_main_serve_runs_uvicorn(monkeypatch: pytest.MonkeyPatch) -> None:
     assert code == 0
     assert [name for name, _ in calls] == ["configure_logging"]
     assert run_calls == [
-        (("finrag.api.main:app",), {"host": "0.0.0.0", "port": 9000, "reload": True})
+        (("fin_nexus.api.main:app",), {"host": "0.0.0.0", "port": 9000, "reload": True})
     ]

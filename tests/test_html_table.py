@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from finrag.ingest.html_table import grid_to_markdown, table_rows
+from fin_nexus.ingest.html_table import grid_to_markdown, table_rows
 
 
 def _markdown(html: str) -> str:

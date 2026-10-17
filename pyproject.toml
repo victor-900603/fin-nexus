@@ -1,5 +1,5 @@
 [project]
-name = "finrag"
+name = "fin-nexus"
 version = "0.0.0"
 description = "金融財報與法規混合檢索增強檢索系統"
 readme = "README.md"
@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [project.scripts]
-finrag = "finrag.cli:main"
+fin-nexus = "fin_nexus.cli:main"
 
 [dependency-groups]
 dev = [
@@ -59,7 +59,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/finrag"]
+packages = ["src/fin_nexus"]
 
 [tool.ruff]
 line-length = 100
@@ -90,10 +90,10 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra --strict-markers --cov=finrag --cov-report=term-missing"
+addopts = "-ra --strict-markers --cov=fin_nexus --cov-report=term-missing"
 
 [tool.coverage.run]
-source = ["finrag"]
+source = ["fin_nexus"]
 branch = true
 
 [tool.coverage.report]
@@ -101,49 +101,49 @@ fail_under = 80
 show_missing = true
 
 [tool.importlinter]
-root_package = "finrag"
+root_package = "fin_nexus"
 
 [[tool.importlinter.contracts]]
 name = "架構分層"
 type = "layers"
 layers = [
-    "finrag.cli",
-    "finrag.api | finrag.eval",
-    "finrag.ingest | finrag.retrieval | finrag.generation",
-    "finrag.storage",
-    "finrag.contracts | finrag.http",
-    "finrag.logging",
-    "finrag.text",
-    "finrag.models",
-    "finrag.config",
+    "fin_nexus.cli",
+    "fin_nexus.api | fin_nexus.eval",
+    "fin_nexus.ingest | fin_nexus.retrieval | fin_nexus.generation",
+    "fin_nexus.storage",
+    "fin_nexus.contracts | fin_nexus.http",
+    "fin_nexus.logging",
+    "fin_nexus.text",
+    "fin_nexus.models",
+    "fin_nexus.config",
 ]
 
 [[tool.importlinter.contracts]]
 name = "generation 不依賴 retrieval"
 type = "forbidden"
-source_modules = ["finrag.generation"]
-forbidden_modules = ["finrag.retrieval"]
+source_modules = ["fin_nexus.generation"]
+forbidden_modules = ["fin_nexus.retrieval"]
 
 [[tool.importlinter.contracts]]
 name = "retrieval 不依賴 ingest"
 type = "forbidden"
-source_modules = ["finrag.retrieval"]
-forbidden_modules = ["finrag.ingest"]
+source_modules = ["fin_nexus.retrieval"]
+forbidden_modules = ["fin_nexus.ingest"]
 
 [[tool.importlinter.contracts]]
 name = "storage 不依賴 ingest"
 type = "forbidden"
-source_modules = ["finrag.storage"]
-forbidden_modules = ["finrag.ingest"]
+source_modules = ["fin_nexus.storage"]
+forbidden_modules = ["fin_nexus.ingest"]
 
 [[tool.importlinter.contracts]]
 name = "eval 不依賴 api"
 type = "forbidden"
-source_modules = ["finrag.eval"]
-forbidden_modules = ["finrag.api"]
+source_modules = ["fin_nexus.eval"]
+forbidden_modules = ["fin_nexus.api"]
 
 [[tool.importlinter.contracts]]
 name = "api.schema 不依賴 retrieval"
 type = "forbidden"
-source_modules = ["finrag.api.schema"]
-forbidden_modules = ["finrag.retrieval"]
+source_modules = ["fin_nexus.api.schema"]
+forbidden_modules = ["fin_nexus.retrieval"]

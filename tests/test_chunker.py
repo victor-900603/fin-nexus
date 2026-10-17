@@ -5,15 +5,15 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from finrag.ingest.chunker import ChunkConfig, _table_header, chunk_document
-from finrag.models import (
+from fin_nexus.ingest.chunker import ChunkConfig, _table_header, chunk_document
+from fin_nexus.models import (
     Block,
     BlockType,
     FinancialReportMeta,
     ParsedDocument,
     ReportPeriod,
 )
-from finrag.storage.repository import write_jsonl
+from fin_nexus.storage.repository import write_jsonl
 
 DOC_ID = "2330_2024_Q1_consolidated"
 
@@ -314,7 +314,7 @@ def test_table_header_without_delimiter_falls_back_to_two_lines() -> None:
 
 
 def test_split_table_fragment_keeps_notes_and_drops_empty_pieces() -> None:
-    from finrag.ingest.chunker import _split_table_fragment
+    from fin_nexus.ingest.chunker import _split_table_fragment
 
     fragment = "| h |\n| --- |\n| " + "x" * 30 + " |\n\n<u>註</u>"
     pieces = _split_table_fragment(fragment, _counter, 20)

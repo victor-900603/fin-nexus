@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from finrag.ingest.targets import build_targets, default_targets
-from finrag.models import ReportPeriod
-from finrag.models.domain import COMPANY_NAMES, ReportTarget
+from fin_nexus.ingest.targets import build_targets, default_targets
+from fin_nexus.models import ReportPeriod
+from fin_nexus.models.domain import COMPANY_NAMES, ReportTarget
 
 
 def test_default_targets_cover_all_companies() -> None:

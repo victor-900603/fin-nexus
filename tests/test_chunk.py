@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from finrag.models import Chunk, ChunkMetadata, ReportPeriod
+from fin_nexus.models import Chunk, ChunkMetadata, ReportPeriod
 
 
 def _metadata(**overrides: object) -> ChunkMetadata:

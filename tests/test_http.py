@@ -7,7 +7,7 @@ from collections.abc import Callable
 import httpx
 import pytest
 
-from finrag.http import (
+from fin_nexus.http import (
     build_client,
     get_bytes,
     get_text,

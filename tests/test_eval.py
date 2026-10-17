@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from finrag.contracts import SearchRequest, SearchResponse, SearchResult
-from finrag.eval.runner import (
+from fin_nexus.contracts import SearchRequest, SearchResponse, SearchResult
+from fin_nexus.eval.runner import (
     EvalCase,
     EvalDataset,
     Expect,

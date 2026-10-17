@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from finrag.storage.embedder import BgeM3Embedder, _to_sparse
+from fin_nexus.storage.embedder import BgeM3Embedder, _to_sparse
 
 
 class _FakeModel:

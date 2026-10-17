@@ -503,7 +503,7 @@ wheels = [
 ]
 
 [[package]]
-name = "finrag"
+name = "fin-nexus"
 version = "0.0.0"
 source = { editable = "." }
 dependencies = [

@@ -6,14 +6,14 @@ from datetime import date
 
 from qdrant_client import models
 
-from finrag.models import (
+from fin_nexus.models import (
     Chunk,
     ChunkMetadata,
     RegulationChunk,
     RegulationChunkMetadata,
     ReportPeriod,
 )
-from finrag.storage import schema
+from fin_nexus.storage import schema
 
 
 def _chunk() -> Chunk:

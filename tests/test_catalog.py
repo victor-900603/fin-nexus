@@ -6,7 +6,7 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
-from finrag.models import (
+from fin_nexus.models import (
     RegulationCatalog,
     RegulationEntry,
     ReportCatalog,
@@ -15,7 +15,7 @@ from finrag.models import (
     ReportScope,
     StageStatus,
 )
-from finrag.storage.repository import read_catalog, write_catalog
+from fin_nexus.storage.repository import read_catalog, write_catalog
 
 DOC_ID = "2330_2024_Q1_consolidated"
 LAW_DOC_ID = "law_G0400001"

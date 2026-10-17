@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from finrag.models.document import ReportPeriod
-from finrag.retrieval.expander import analyze
-from finrag.retrieval.ontology import Ontology
+from fin_nexus.models.document import ReportPeriod
+from fin_nexus.retrieval.expander import analyze
+from fin_nexus.retrieval.ontology import Ontology
 
 _ONTO = Ontology(
     tickers={"2330": ("台積電", "TSMC")},

@@ -7,12 +7,12 @@ from pathlib import Path
 
 import httpx
 
-from finrag.ingest.regulations import (
+from fin_nexus.ingest.regulations import (
     fetch_regulation,
     law_url,
     regulation_filename,
 )
-from finrag.models.domain import (
+from fin_nexus.models.domain import (
     ACQUISITION_DISPOSAL_LAW,
     INTERNAL_CONTROL_LAW,
     LAW_SPECS,

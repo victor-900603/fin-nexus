@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from finrag.ingest.outline import (
+from fin_nexus.ingest.outline import (
     OutlineEntry,
     extract_outline,
     is_heading,
     normalize_heading,
     page_sections,
 )
-from finrag.models import Block, BlockType
+from fin_nexus.models import Block, BlockType
 
 _OUTLINE_TEXT = "\n".join(
     [

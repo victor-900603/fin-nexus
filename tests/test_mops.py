@@ -8,13 +8,13 @@ from pathlib import Path
 import httpx
 import pytest
 
-from finrag.ingest.mops import (
+from fin_nexus.ingest.mops import (
     fetch_financial_report,
     list_report_files,
     mops_report_name,
     report_filename,
 )
-from finrag.models.domain import to_western_year
+from fin_nexus.models.domain import to_western_year
 
 LIST_HTML = (
     'readfile2("A","2330","202501_2330_AI1.pdf");'

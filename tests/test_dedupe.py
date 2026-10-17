@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from finrag.contracts import SearchHit
-from finrag.retrieval.dedupe import dedupe
+from fin_nexus.contracts import SearchHit
+from fin_nexus.retrieval.dedupe import dedupe
 
 COLLECTION = "fin_reports"
 

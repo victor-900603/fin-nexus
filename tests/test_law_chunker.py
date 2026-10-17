@@ -5,16 +5,16 @@ from __future__ import annotations
 from datetime import date
 from pathlib import Path
 
-from finrag.ingest.chunker import ChunkConfig
-from finrag.ingest.law_chunker import chunk_regulation
-from finrag.models import (
+from fin_nexus.ingest.chunker import ChunkConfig
+from fin_nexus.ingest.law_chunker import chunk_regulation
+from fin_nexus.models import (
     ParsedRegulation,
     RegulationArticle,
     RegulationChunk,
     RegulationClause,
     RegulationMeta,
 )
-from finrag.storage.repository import write_jsonl
+from fin_nexus.storage.repository import write_jsonl
 
 
 def _meta() -> RegulationMeta:

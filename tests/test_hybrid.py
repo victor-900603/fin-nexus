@@ -8,10 +8,10 @@ from typing import Any
 
 from qdrant_client import models
 
-from finrag.contracts import SearchHit
-from finrag.retrieval.hybrid import search
-from finrag.retrieval.router import RoutePlan
-from finrag.storage.qdrant_client import DENSE_VECTOR, SPARSE_VECTOR
+from fin_nexus.contracts import SearchHit
+from fin_nexus.retrieval.hybrid import search
+from fin_nexus.retrieval.router import RoutePlan
+from fin_nexus.storage.qdrant_client import DENSE_VECTOR, SPARSE_VECTOR
 
 
 class _FakeEmbedder:

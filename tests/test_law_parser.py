@@ -7,14 +7,14 @@ from pathlib import Path
 
 import pytest
 
-from finrag.ingest.law_parser import (
+from fin_nexus.ingest.law_parser import (
     parse_regulation,
     parse_revision_date,
 )
-from finrag.ingest.regulations import law_url
-from finrag.models.document import ParsedRegulation
-from finrag.models.domain import SECURITIES_LAW
-from finrag.storage.repository import write_json
+from fin_nexus.ingest.regulations import law_url
+from fin_nexus.models.document import ParsedRegulation
+from fin_nexus.models.domain import SECURITIES_LAW
+from fin_nexus.storage.repository import write_json
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
